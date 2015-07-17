@@ -12,6 +12,7 @@ using HSCF;
 using HomeSeerAPI;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
+using EnOcean;
 
 namespace HSPI_EnOcean
 {
@@ -39,26 +40,25 @@ namespace HSPI_EnOcean
       //  bool configurationChanged = true;
         string cloudKey;
         string cloudName;
+        JObject config;
         HSPI hspiInst;
         public EnOceanController(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst)
         {
             hspiInst = pHspiInst;
             HS = pHsHost;
             HSCB = pHsCB;
-            Console.WriteLine("Encoding: {0}", System.Text.Encoding.Default);
+        //    Console.WriteLine("Encoding: {0}", System.Text.Encoding.Default);
             //System.Text.Encoding.Default = System.Text.UTF8Encoding.Default;
-            Thread queueHandlerTask = new Thread(new ThreadStart(this.QueueProcesserThread));
-            queueHandlerTask.Start();
+            //Thread queueHandlerTask = new Thread(new ThreadStart(this.QueueProcesserThread));
+            //queueHandlerTask.Start();
         }
         public void QueueProcesserThread()
         {
             DateTime nextRun = DateTime.UtcNow;
             while (hspiInst.Running)
             {
-
                 while (DateTime.UtcNow < nextRun)
                     Thread.Sleep(50); // Sleep 
-
             }
         }
         protected void ReloadConfig()
@@ -67,162 +67,73 @@ namespace HSPI_EnOcean
             cloudKey = HS.GetINISetting("EnOcean", "authkey", "[missing]");
 //            configurationChanged = false;
         }
-        public void Initialize()
+        int hsRootDevRefId = 0;
+        public Scheduler.Classes.DeviceClass getHSRootDevice()
         {
-            Dictionary<int, Scheduler.Classes.DeviceClass> device_map = new Dictionary<int, Scheduler.Classes.DeviceClass>();
-            //            Dictionary<int, JObject> json_map = new Dictionary<int, JObject>();
-            Dictionary<int, bool> processed = new Dictionary<int, bool>();
-            return;
-            try
+            // Don't cache hsDevice directly - but we cache HS refId. 
+            // We can invalidate root dev by setting hsRootDevRefId to 0
+            if (hsRootDevRefId == 0)
             {
-                JObject jConfig = new JObject();
-                processed.Clear();
-                device_map.Clear();
-
-                JArray jDevices = new JArray();
                 Scheduler.Classes.clsDeviceEnumeration devenum = HS.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
 
                 while (!devenum.Finished)
                 {
                     Scheduler.Classes.DeviceClass dev = devenum.GetNext();
-                    device_map.Add(dev.get_Ref(null), dev);
+                    if (dev.get_Device_Type_String(null) == "EnOcean Controller")
+                    {
+                        hsRootDevRefId = dev.get_Ref(null);
+                        return dev;
+                    } 
                 }
-                foreach (var dev in device_map.Values)
-                {
-                    /*
-                    string devImage = dev.get_Image(null);
-                    try {
-                        if (devImage != "")
-                        {
-                            Console.WriteLine("Got image path of {0}", devImage);
-                            string baseName = Path.GetFileName(devImage);
-                            string fpath = Path.GetFullPath("image_cache/" + baseName);
-                            WebClient wc = new WebClient();
-                            string fullUrl = "http://128.0.7.100:8080/" + devImage.Replace('\\', '/');
-                            Console.WriteLine("Fetching image from {0}", fullUrl);
-                            if (File.Exists(fpath) == false)
-                            {
-                                Stream stream = wc.OpenRead(fullUrl);
-                                FileStream outfile = new FileStream(fpath, FileMode.Create);
-                                stream.CopyTo(outfile);
-                                outfile.Flush();
-                                outfile.Close();
-                            }
-                            FileInfo fi = new FileInfo(fpath);
-                            if (fi.Length > 5000)
-                            {
-                                Console.WriteLine("Image too big as thumbnail : {0}", fi.Length);
-                                Image srcImage = Image.FromFile(fpath);
-                                Image destImage = new Bitmap(srcImage, new Size(32, 32));
-                                string destPath = "thumbs/32x32_" + Path.GetFileName(fpath);
-                                HS.WriteHTMLImage(destImage, destPath, true);
-                                dev.set_Image(HS, "images/" + destPath);
-                                //Console.WriteLine("Resized to : {0}", 
-                                //                            destImage.Save()
-                            }
-                          //Bitmap bitmap = new Bitmap(stream);
-                          //Image img =
-                               
-                          //image.source = bitmap;                       
-                        //string result = HS.GetURLImageEx("128.0.7.100", devImage, fpath, 8080);
-                       // if (result == "") { 
-                         //   FileInfo f = new FileInfo(fpath);
-                           // Console.WriteLine("Got file image of size {0}", f.Length);
-                        //} else {
-                          //  Console.WriteLine("Error: {0}", result);
-                        //}
-                    }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine("Some error testing thumbnail: {0}", e.Message);
-                    }*/
-                    if (dev.get_Relationship(null) == Enums.eRelationship.Child)
-                        continue;
-                    JObject jDev = new JObject();
-                    jDev.Add("name", dev.get_Name(null));
-                    Console.WriteLine("Got device : {0} ({1})", dev.get_Name(null), dev.get_Ref(null));
-                    string dev_addr = dev.get_Address(null);
-                    //                    if (dev_addr == "")
-                    jDev.Add("address", dev_addr);
-                    jDev.Add("unique_id", "HS-ID-" + dev.get_Ref(null));
-                    jDev.Add("id", dev.get_Ref(null));
-                    jDev.Add("location", dev.get_Location(null));
-                    jDev.Add("sublocation", dev.get_Location2(null));
-                    DateTime lastChange = dev.get_Last_Change(null);
-                    if (lastChange > DateTime.MinValue)
-                    {
-                        jDev.Add("value", dev.get_devValue(null));
-                        jDev.Add("time", dev.get_Last_Change(null));
-                    }
-
-                    jDev.Add("type", dev.get_Device_Type_String(null));
-                    jDev.Add("interface", dev.get_Interface(null));
-                    jDev.Add("scale", dev.get_ScaleText(null));
-                    jDev.Add("note", dev.get_UserNote(null));
-                    jDev.Add("attention", dev.get_Attention(null));
-                    jDev.Add("version", dev.Version);
-                    jDev.Add("controls", new JObject());
-                    jDev.Add("datasources", new JObject());
-                    jDev.Add("events", new JObject());
-                    //               jDev.Add("foo", dev.get_Last_Change(null));
-                    switch (dev.get_Relationship(null))
-                    {
-                        case Enums.eRelationship.Child:
-                            throw new Exception("Should never happen here! Skipping device - we are a child-- fixme");
-                        //break;
-                        case Enums.eRelationship.Standalone:
-                        case Enums.eRelationship.Not_Set:
-                            Console.WriteLine("Unknown or standalone device - we are a child -- fixme, {0} -> {1}", dev.get_Ref(null), dev.get_Address(null));
-                            if (processed.ContainsKey(dev.get_Ref(null)))
-                            {
-                                Console.WriteLine(" DUPL !!!!");
-                                continue;
-                            }
-                            jDevices.Add(jDev);
-                            JsonAddDeviceEntryPoints(dev, "HS-ID-" + dev.get_Ref(null), jDev);
-                            processed.Add(dev.get_Ref(null), true);
-                            break;
-                        case Enums.eRelationship.Parent_Root:
-                            Console.WriteLine("Child List : {0}", string.Join(", ", dev.get_AssociatedDevices(null)));
-                            foreach (var childRef in dev.get_AssociatedDevices(null))
-                            {
-                                Scheduler.Classes.DeviceClass childDev = device_map[childRef];
-                                Console.WriteLine("   -> ChildRef {0}: {1} {2}", childRef, childDev.get_Address(null), childDev.get_Relationship(null).ToString());
-                                if (processed.ContainsKey(childRef))
-                                {
-                                    Console.WriteLine(" CHLD DUPL !!!!");
-                                    continue;
-                                }
-
-                                JsonAddDeviceEntryPoints(childDev, "HS-ID-" + childRef, jDev);
-                                Console.WriteLine("Marking {0} as processed!", childDev.get_Ref(null));
-                                processed.Add(childDev.get_Ref(null), true);
-                            }
-                            jDevices.Add(jDev);
-                            processed.Add(dev.get_Ref(null), true);
-                            break;
-                        default:
-                            throw new Exception("FIX ME - unhandled relationship");
-                    }
-                    Console.WriteLine("Marking {0} as processed!", dev.get_Ref(null));
-                    //                jDev.Add("foo", );
-                }
-                //   Console.WriteLine("Got json of : {0}", jDevices.ToString());
-                HS.SaveEventsDevices();
-                JObject jSystem = new JObject();
-                jSystem.Add("name", cloudName);
-                jConfig.Add("devices", jDevices);
-                jConfig.Add("system", jSystem);
-                jConfig.Add("time", DateTime.UtcNow.ToString());
-
-                //QueueEvent("Connector", "Inventory", jConfig);
+                Console.WriteLine(" No EnOcean controller HS device - creating.");
+                // Not found - create device
+                int newDevRef = HS.NewDeviceRef("EnOcean Controller");
+                var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(newDevRef);
+                newDev.set_Device_Type_String(HS, "EnOcean Controller");
             }
-            catch (Exception e)
+
+            Scheduler.Classes.DeviceClass rootDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(hsRootDevRefId);
+            return rootDev;
+        }
+        public void setControllerStatus(string status)
+        {
+            var rootDev = getHSRootDevice();
+            HS.SetDeviceString(rootDev.get_Ref(null), status, false);
+        }
+        EnOceanFrameLayer controller;
+
+        public void Initialize()
+        {
+            Dictionary<int, Scheduler.Classes.DeviceClass> device_map = new Dictionary<int, Scheduler.Classes.DeviceClass>();
+            //            Dictionary<int, JObject> json_map = new Dictionary<int, JObject>();
+            Dictionary<int, bool> processed = new Dictionary<int, bool>();
+
+            config = new JObject();
+            var rootDev = getHSRootDevice();
+            var extraData = rootDev.get_PlugExtraData_Get(null);
+            var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
+            if (dataStr == null)
             {
-                Console.WriteLine("Error enumerating devices: {0}", e.Message);
+                Console.WriteLine("No json data on device - adding");
+                extraData.AddNamed("EnOcean Cfg", config.ToString());
+                rootDev.set_PlugExtraData_Set(HS, extraData);
+                HS.SaveEventsDevices();
             }
-
+            else
+            {
+                config = JObject.Parse(dataStr);
+                Console.WriteLine("Loaded config: {0}", config.ToString());
+            }
+            setControllerStatus("Initializing");
+            controller = new EnOceanFrameLayer();
+            if (controller.Open("com23"))
+            {
+                setControllerStatus("Active");
+            }
+            else
+            {
+                setControllerStatus("Error!");
+            }
         }
         void JsonAddDeviceEvent(string Name, JObject JDest)
         {

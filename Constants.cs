@@ -9,7 +9,7 @@ namespace HSPI_EnOcean
     static public class Constants
     {
         public static String PLUGIN_STRING_ID = "HS3_EnOcean";
-        public static String PLUGIN_STRING_NAME = "EnOcean plugin";
+        public static String PLUGIN_STRING_NAME = "EnOcean";
         public static String DEVICE_PLUGIN_ID_KEY = "hs3_enocean_id_key";
         public static String DEVICE_PLUGIN_VERSION_KEY = "hs3_enocean_revision_key";
         public static TimeSpan HOUSEKEEPER_RUN_INTERVAL = new TimeSpan(0, 5, 0);

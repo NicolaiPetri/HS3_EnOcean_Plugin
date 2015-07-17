@@ -26,9 +26,6 @@ namespace HSPI_EnOcean
         HSPI pluginInst;
         public void run()
         {
-            EnOceanFrameLayer hest = new EnOceanFrameLayer();
-            hest.Open("com23");
-            
             string[] cmdArgs = Environment.GetCommandLineArgs();
             Console.WriteLine("Manager::run() - arguments are {0}", Environment.CommandLine);
             String paramServer = "127.0.0.1";

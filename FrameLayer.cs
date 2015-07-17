@@ -72,15 +72,15 @@ using System.Threading;
             }
 			void commThread() {
 				Console.WriteLine("Starting communications thread");
-				byte[] verGet = new byte[] { ZConstants.Z_REQUEST, 0x15};
-				SendFrame(verGet);
+//				byte[] verGet = new byte[] { ZConstants.Z_REQUEST, 0x15};
+//				SendFrame(verGet);
 				//serialPort.Write(verGet, 0, verGet.Length);
 				//serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
 				while (commActive) {
-					//Thread.Sleep(500);
-					SendFrame(verGet);
+					Thread.Sleep(500);
+	//				SendFrame(verGet);
 				}
-				Console.WriteLine("Bytes avail is : {0}", serialPort.BytesToRead);
+				//Console.WriteLine("Bytes avail is : {0}", serialPort.BytesToRead);
 				Console.WriteLine("Ending comm thread");
 			}
 			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
@@ -88,7 +88,7 @@ using System.Threading;
 
 
 			bool SendFrame(byte[] frame) {
-				lock (commLock) {
+/*				lock (commLock) {
 					byte[] completeFrame = new byte[frame.Length+3];
 					completeFrame[0] = ZConstants.Z_SOF;
 					completeFrame[1] = (byte)(frame.Length+1);
@@ -104,6 +104,8 @@ using System.Threading;
 						return true;
 					return false;
 				}
+ */
+                return false;
 			}
 			byte CalculateFrameChecksum(byte[] frameData) {
 				byte chksum = 0xff;
@@ -118,8 +120,8 @@ using System.Threading;
 				serialPort.Open();
 
 				commActive = true;
-				commThreadHandle = new Thread(new ThreadStart(commThread));
-				commThreadHandle.Start();
+//				commThreadHandle = new Thread(new ThreadStart(commThread));
+//				commThreadHandle.Start();
 				return serialPort.IsOpen;
 			}
 			public bool Close() {
@@ -219,15 +221,9 @@ using System.Threading;
             public event PacketEventHandler PacketEvent;
 
 		}
-		public class ZConstants {
-			public const byte Z_SOF = 0x01;
-			public const byte Z_ACK = 0x06;
-			public const byte Z_NAK = 0x15;
-			public const byte Z_CAN = 0x18;
-			public const byte Z_REQUEST = 0x00;
-			public const byte Z_RESPONSE = 0x01;
-		}
-		class ZWavePlugin /*: iYesPlugin */ {
+/*		class ZWavePlugin 
+            //: iYesPlugin 
+        {
 			Object Engine;
 			EnOceanFrameLayer zProto;
 			Boolean PluginRunning;
@@ -269,5 +265,6 @@ using System.Threading;
 				PluginRunning = false;
 			}
 		}
+ */
 //	}
 }

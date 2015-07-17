@@ -261,6 +261,19 @@ namespace HSPI_EnOcean
             }*/
             mCore = new EnOceanController(hsHost, hsHostCB, this);
             mCore.Initialize();
+/*
+            Scheduler.Classes.clsDeviceEnumeration devenum = hsHost.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
+
+           while (!devenum.Finished)
+            {
+                Scheduler.Classes.DeviceClass dev = devenum.GetNext();
+                var devInfo = dev.get_DeviceType_Get(hsHost);
+                Console.WriteLine(" got device of type {0}:{1} => {2}:{3} ({4})", devInfo.Device_Type, devInfo.Device_SubType, devInfo.Device_Type_Description, devInfo.Device_SubType_Description, dev.get_Ref(null));
+ //               devInfo.
+//                device_map.Add(dev.get_Ref(null), dev);
+            }
+  */ 
+//            hsHost.Device
 
             //hsHostCB.RegisterEventCB(Enums.HSEvent.VALUE_CHANGE, Name, "");
             hsHostCB.RegisterEventCB(Enums.HSEvent.CONFIG_CHANGE, Name, "");
@@ -299,7 +312,7 @@ namespace HSPI_EnOcean
                   wpd3.plugInName = Name;
                   hsHostCB.RegisterLink(wpd3);
              */
-
+            Console.WriteLine("INIT IO complete");
             return ""; // empty == OK 
         }
 
@@ -441,7 +454,7 @@ namespace HSPI_EnOcean
         public HSPI(String pInstance)
         {
             Name = Constants.PLUGIN_STRING_NAME;
-            HSCOMPort = false;
+            HSCOMPort = true;
             //ActionAdvancedMode = xxx; // TODO:
             HasTriggers = false;
             TriggerCount = 0;
