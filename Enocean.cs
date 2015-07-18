@@ -87,9 +87,11 @@ namespace HSPI_EnOcean
                 }
                 Console.WriteLine(" No EnOcean controller HS device - creating.");
                 // Not found - create device
-                int newDevRef = HS.NewDeviceRef("EnOcean Controller");
-                var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(newDevRef);
+                hsRootDevRefId = HS.NewDeviceRef("EnOcean Controller");
+                var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(hsRootDevRefId);
                 newDev.set_Device_Type_String(HS, "EnOcean Controller");
+                HS.SaveEventsDevices();
+                return newDev;
             }
 
             Scheduler.Classes.DeviceClass rootDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(hsRootDevRefId);
@@ -110,30 +112,60 @@ namespace HSPI_EnOcean
 
             config = new JObject();
             var rootDev = getHSRootDevice();
-            var extraData = rootDev.get_PlugExtraData_Get(null);
+            var extraData = rootDev.get_PlugExtraData_Get(HS);
+            if (extraData == null)
+                extraData = new PlugExtraData.clsPlugExtraData();
             var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
-            if (dataStr == null)
-            {
+            if (dataStr == null) {
                 Console.WriteLine("No json data on device - adding");
                 extraData.AddNamed("EnOcean Cfg", config.ToString());
                 rootDev.set_PlugExtraData_Set(HS, extraData);
-                HS.SaveEventsDevices();
-            }
-            else
-            {
+            } else {
                 config = JObject.Parse(dataStr);
                 Console.WriteLine("Loaded config: {0}", config.ToString());
             }
+            if (config["unknown_nodes"] == null)
+            {
+                config.Add("unknown_nodes", new JObject());
+            }
+            if (config["nodes"] == null)
+            {
+                config.Add("nodes", new JObject());
+            }
+
             setControllerStatus("Initializing");
             controller = new EnOceanFrameLayer();
-            if (controller.Open("com23"))
-            {
+            if (controller.Open("com23")) {
+                controller.PacketEventHandler += controller_PacketEvent;
                 setControllerStatus("Active");
-            }
-            else
-            {
+            } else {
                 setControllerStatus("Error!");
             }
+        }
+        void controller_PacketEvent(EnOceanPacket pkt)
+        {
+            Console.WriteLine("Got packet: {0}, opt type {1}", pkt, pkt.Get_OptionalData().getType());
+            if (pkt.Get_OptionalData() != null) {
+                var odata = pkt.Get_OptionalData();
+                Console.WriteLine(" - destination was {0:X8}", odata.getDestination());
+                var hsDev = GetHSDeviceByAddress(pkt.getSource());
+            }
+            //pkt.Get_OptionalData().
+
+            /* Todo: 
+             * 
+             * 1: Locate sender
+             * (2: check destination - me or broadcast)
+             * 3: Add device to seen list or dispatch related event if device is configured
+             */
+            
+
+            //throw new NotImplementedException();
+        }
+
+        private object GetHSDeviceByAddress(UInt32 p)
+        {
+            throw new NotImplementedException();
         }
         void JsonAddDeviceEvent(string Name, JObject JDest)
         {

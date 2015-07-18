@@ -4,18 +4,63 @@ using System.IO.Ports;
 using System.Collections.Generic;
 using System.Threading;
 
-	namespace EnOcean {
-        public class EnOceanPacket
+namespace EnOcean
+{
+    public enum PacketType { TYPE_RESERVED = 0, TYPE_RADIO_ERP1 = 1, TYPE_RESPONSE, TYPE_RADIO_SUB_TEL, TYPE_EVENT, TYPE_COMMON_COMMAND, TYPE_SMART_ACK_COMMAND, TYPE_REMOTE_MAN_COMMAND, TYPE_RESERVED_ENOCEAN, TYPE_RADIO_MESSAGE, TYPE_RADIO_ERP2 };
+
+    public class EnOceanOptionalData
+    {
+        private IList<byte> list;
+
+        public EnOceanOptionalData(IList<byte> list)
         {
-            public DateTime recieved = DateTime.UtcNow;
-            static public EnOceanPacket Parse(IList<byte> data, IList<byte> optData)
-            {
-                
-                return new EnOceanPacket();
-            }
+            this.list = list;
         }
-		public class EnOceanFrameLayer {
-            byte[] u8CRC8Table = {
+        public PacketType getType()
+        {
+            return (PacketType)list[0];
+        }
+        public UInt32 getDestination()
+        {
+            UInt32 dest = list[1];
+            dest = (dest * 256) + list[2];
+            dest = (dest * 256) + list[3];
+            dest = (dest * 256) + list[4];
+
+            return dest;
+        }
+
+    }
+    public class EnOceanPacket
+    {
+        public DateTime recieved = DateTime.UtcNow;
+        private IList<byte> data;
+        private IList<byte> optData;
+        private PacketType type;
+
+        public EnOceanOptionalData Get_OptionalData()
+        {
+            return new EnOceanOptionalData(this.optData);
+        }
+        public EnOceanPacket(byte pkt_type, IList<byte> data, IList<byte> optData)
+        {
+            this.data = data;
+            this.optData = optData;
+            this.type = (PacketType)pkt_type;
+        }
+        static public EnOceanPacket Parse(byte pkt_type, IList<byte> data, IList<byte> optData)
+        {
+            return new EnOceanPacket(pkt_type, data, optData);
+        }
+
+        internal UInt32 getSource()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    public class EnOceanFrameLayer
+    {
+        byte[] u8CRC8Table = {
 0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15,
 0x38, 0x3f, 0x36, 0x31, 0x24, 0x23, 0x2a, 0x2d,
 0x70, 0x77, 0x7e, 0x79, 0x6c, 0x6b, 0x62, 0x65,
@@ -49,222 +94,179 @@ using System.Threading;
 0xde, 0xd9, 0xd0, 0xd7, 0xc2, 0xc5, 0xcc, 0xcb,
 0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 };
-//#define proccrc8(u8CRC, u8Data) (u8CRC8Table[u8CRC ^ u8Data])
-            byte proccrc8(byte u8CRC, byte u8Data) {
-                return u8CRC8Table[u8CRC ^ u8Data];
-            }
-            public byte CalcCRC8(IList<byte> data, int len) {
-                byte u8CRC = 0;
-                for (int i = 0 ; i < len ; i++)
-                    u8CRC = proccrc8(u8CRC, data[i]);
-                //Console.WriteLine("CRC8 = 0x{0:x}", u8CRC);
-                return u8CRC;
-            }
-			SerialPort serialPort;
-			Thread commThreadHandle;
-			Boolean commActive;
-			object commLock = new object();
-			public EnOceanFrameLayer() {
-            //                public delegate int Dispatch(EnOceanPacket pkt);
-                                    PacketEvent += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
-
-
-            }
-			void commThread() {
-				Console.WriteLine("Starting communications thread");
-//				byte[] verGet = new byte[] { ZConstants.Z_REQUEST, 0x15};
-//				SendFrame(verGet);
-				//serialPort.Write(verGet, 0, verGet.Length);
-				//serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
-				while (commActive) {
-					Thread.Sleep(500);
-	//				SendFrame(verGet);
-				}
-				//Console.WriteLine("Bytes avail is : {0}", serialPort.BytesToRead);
-				Console.WriteLine("Ending comm thread");
-			}
-			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
-			int waitSendResult = 0;
-
-
-			bool SendFrame(byte[] frame) {
-/*				lock (commLock) {
-					byte[] completeFrame = new byte[frame.Length+3];
-					completeFrame[0] = ZConstants.Z_SOF;
-					completeFrame[1] = (byte)(frame.Length+1);
-					frame.CopyTo(completeFrame, 2);
-					completeFrame[completeFrame.Length-1] = CalculateFrameChecksum(completeFrame);
-					//= new byte[] { ZConstants.Z_SOF, 3, ZConstants.Z_REQUEST, 0x15};
-					serialPort.Write(completeFrame, 0, completeFrame.Length);
-					//serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
-//					while (1) {
-//						ackCount = 
-//					}
-					if (waitSendEvent.WaitOne(2000) && waitSendResult==1)
-						return true;
-					return false;
-				}
- */
-                return false;
-			}
-			byte CalculateFrameChecksum(byte[] frameData) {
-				byte chksum = 0xff;
-				for (int i=1; i<frameData.Length-1;i++) {
-					chksum ^= frameData[i];
-				}
-				return chksum;
-			}
-			public bool Open(string portName) {
-				serialPort = new SerialPort(portName, 57600);
-				serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-				serialPort.Open();
-
-				commActive = true;
-//				commThreadHandle = new Thread(new ThreadStart(commThread));
-//				commThreadHandle.Start();
-				return serialPort.IsOpen;
-			}
-			public bool Close() {
-				if (commThreadHandle != null) {
-					commActive = false;
-					commThreadHandle.Join();
-					commThreadHandle = null;
-				}
-				if (serialPort != null) {
-					serialPort.Close();
-					serialPort = null;
-					return true;
-				}
-				return false;
-			}
-//			byte[] receiveBuffer = new byte[256]; // FIXME: Should be higher .. maybe
-			List<byte> receiveBuffer = new List<byte>();
-			int receiveIdx = 0;
-			void onCommDataReceived(
-				object sender,
-				SerialDataReceivedEventArgs args)
-			{
-				//try {
-					SerialPort sp = (SerialPort)sender;
-					//Console.WriteLine("Data ready: {0} bytes", sp.BytesToRead);
-					byte[] rBuf = new byte[sp.BytesToRead];
-					int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
-					receiveBuffer.InsertRange(receiveBuffer.Count, rBuf);
-					receiveIdx += bytesRead;
-                    Console.WriteLine("Data Received: {0} bytes", bytesRead);
-                    foreach (var b in receiveBuffer)
-                    {
-                        Console.Write("0x{0:X2} ",b);
-                    }
-                    Console.WriteLine();
-                    AGAIN:
-                    while (receiveBuffer.Count > 0 && receiveBuffer[0] != 0x55)
-                        receiveBuffer.RemoveAt(0);
-//                    receiveBuffer.RemoveAt(0);
-                    if (receiveBuffer.Count < 6)
-                    {
-                       // Console.WriteLine(" --- return - not enough data in buffer for a complete frame. : {0}", receiveBuffer.Count);
-                        return;
-                    }
-                    receiveBuffer.RemoveAt(0); // Remove SYNC byte 0x55
-                    byte hdrCrc8 = CalcCRC8(receiveBuffer, 4);
-                    if (hdrCrc8 != receiveBuffer[4])
-                    {
-                        Console.WriteLine("CRC ERROR FOR PACKET HDR - or not a sync start\n");
-                        goto AGAIN;
-                    }
-                    UInt16 pktLen = receiveBuffer[0];
-                    pktLen *= 256;
-                    pktLen += receiveBuffer[1];
-                    //Console.WriteLine(" Packet len is {0}", pktLen);
-                    Byte optLen = receiveBuffer[2];
-                    Byte pktType = receiveBuffer[3];
-                    if ((pktLen + optLen + 6) > receiveBuffer.Count)
-                    {
-                        // Not enough data yet.. push back header..
-                        Console.WriteLine(" ABANDON FOR LATER - NOT ENOUGH DATA");
-                        receiveBuffer.Insert(0, 0x55);
-                        return; 
-                    }
-                    receiveBuffer.RemoveRange(0, 5); // Remove hdr
-                    Byte dtaCrc = CalcCRC8(receiveBuffer, pktLen + optLen);
-                    if (dtaCrc == receiveBuffer[optLen + pktLen])
-                    {
-                       // Console.WriteLine(" ----- MATCH DATA CRC OK");
-                        receiveBuffer.RemoveAt(receiveBuffer.Count - 1); // Remove checksum - we have checked it already
-                        List<byte> payload = receiveBuffer.GetRange(0, pktLen);
-                        List<byte> optPayload =  receiveBuffer.GetRange(pktLen, optLen);
-//                        receiveBuffer.GetRange
-  //                      receiveBuffer.CopyTo(0, payload, 0, pktLen);
-    //                    List<byte> buf = new List<byte>(receiveBuffer);
-                        Console.WriteLine("Dispatching validated packet of {0} bytes and {1} bytes", payload.Count, optPayload.Count);
-                        EnOceanPacket parsedPkt = EnOceanPacket.Parse(payload, optPayload);
-//                        PacketEvent += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
-                        if (PacketEvent != null)
-                            PacketEvent(parsedPkt);
-                        //Dispatch(parsedPkt);
-                        //                        receiveBuffer.
-                        
-                        receiveBuffer.RemoveRange(0, optLen + pktLen );
-                        goto AGAIN;
-                    }
-                    //Console.WriteLine("Data + optData crc8 is 0x{0:x}", dtaCrc);
-					//Console.WriteLine("Read : {0}", String.Join(" ", receiveBuffer));
-//					if (receiveIdx > 0) {
-	//					ProcessReceiveBuffer();
-					//}
-				//} catch (Exception e) {
-				//	Console.WriteLine("Error while processing comm packet: {0}", e.Message);
-				//}
-			}
-            public delegate void PacketEventHandler(EnOceanPacket pkt);
-            public event PacketEventHandler PacketEvent;
-
-		}
-/*		class ZWavePlugin 
-            //: iYesPlugin 
+        //#define proccrc8(u8CRC, u8Data) (u8CRC8Table[u8CRC ^ u8Data])
+        byte proccrc8(byte u8CRC, byte u8Data)
         {
-			Object Engine;
-			EnOceanFrameLayer zProto;
-			Boolean PluginRunning;
-			public ZWavePlugin(object engine) {
-				Engine = engine;
-				Console.WriteLine("ZWave loaded");	
-				Name="Experimental Z-Wave plugin";
-				PluginId="YesZWavePlugin";
-				Version = 0.1m;
-				Build = 1;
-				Priority = 100;
-			}
-			public String Name { get; private set; }
-			public String PluginId { get; private set; }
-			public Decimal Version { get;  private set; }
-			public UInt64 Build { get;  private set; }
-			public UInt64 Priority { get; private set; }
-			public Boolean PreInitialize()
-			{
-				Console.WriteLine("{0}: PreInitialize", PluginId);
-				return true;
-			}
-			public Boolean PostInitialize()
-			{
-				Console.WriteLine("{0}: PostInitialize", PluginId);
-				return true;
-			}
-			public void Run()
-			{
-				PluginRunning = true;
-				zProto = new EnOceanFrameLayer();
-				zProto.Open("/dev/ttyU0");
-				while (PluginRunning) {
-					Thread.Sleep(1000);
-				}
-				zProto.Close();
-			}
-			public void Stop() {
-				PluginRunning = false;
-			}
-		}
- */
-//	}
+            return u8CRC8Table[u8CRC ^ u8Data];
+        }
+        public byte CalcCRC8(IList<byte> data, int len)
+        {
+            byte u8CRC = 0;
+            for (int i = 0; i < len; i++)
+                u8CRC = proccrc8(u8CRC, data[i]);
+            //Console.WriteLine("CRC8 = 0x{0:x}", u8CRC);
+            return u8CRC;
+        }
+        SerialPort serialPort;
+        Thread commThreadHandle;
+        Boolean commActive;
+        object commLock = new object();
+        public EnOceanFrameLayer()
+        {
+            //                public delegate int Dispatch(EnOceanPacket pkt);
+            PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
+
+
+        }
+        void commThread()
+        {
+            Console.WriteLine("Starting communications thread");
+            //				byte[] verGet = new byte[] { ZConstants.Z_REQUEST, 0x15};
+            //				SendFrame(verGet);
+            //serialPort.Write(verGet, 0, verGet.Length);
+            //serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
+            while (commActive)
+            {
+                Thread.Sleep(500);
+                //				SendFrame(verGet);
+            }
+            //Console.WriteLine("Bytes avail is : {0}", serialPort.BytesToRead);
+            Console.WriteLine("Ending comm thread");
+        }
+        //			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
+        //			int waitSendResult = 0;
+
+
+        bool SendFrame(byte[] frame)
+        {
+            /*				lock (commLock) {
+                                byte[] completeFrame = new byte[frame.Length+3];
+                                completeFrame[0] = ZConstants.Z_SOF;
+                                completeFrame[1] = (byte)(frame.Length+1);
+                                frame.CopyTo(completeFrame, 2);
+                                completeFrame[completeFrame.Length-1] = CalculateFrameChecksum(completeFrame);
+                                //= new byte[] { ZConstants.Z_SOF, 3, ZConstants.Z_REQUEST, 0x15};
+                                serialPort.Write(completeFrame, 0, completeFrame.Length);
+                                //serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
+            //					while (1) {
+            //						ackCount = 
+            //					}
+                                if (waitSendEvent.WaitOne(2000) && waitSendResult==1)
+                                    return true;
+                                return false;
+                            }
+             */
+            return false;
+        }
+        byte CalculateFrameChecksum(byte[] frameData)
+        {
+            byte chksum = 0xff;
+            for (int i = 1; i < frameData.Length - 1; i++)
+            {
+                chksum ^= frameData[i];
+            }
+            return chksum;
+        }
+        public bool Open(string portName)
+        {
+            serialPort = new SerialPort(portName, 57600);
+            serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
+            serialPort.Open();
+
+            commActive = true;
+            //				commThreadHandle = new Thread(new ThreadStart(commThread));
+            //				commThreadHandle.Start();
+            return serialPort.IsOpen;
+        }
+        public bool Close()
+        {
+            if (commThreadHandle != null)
+            {
+                commActive = false;
+                commThreadHandle.Join();
+                commThreadHandle = null;
+            }
+            if (serialPort != null)
+            {
+                serialPort.Close();
+                serialPort = null;
+                return true;
+            }
+            return false;
+        }
+        //			byte[] receiveBuffer = new byte[256]; // FIXME: Should be higher .. maybe
+        List<byte> receiveBuffer = new List<byte>();
+        int receiveIdx = 0;
+        void onCommDataReceived(
+            object sender,
+            SerialDataReceivedEventArgs args)
+        {
+            //try {
+            SerialPort sp = (SerialPort)sender;
+            //Console.WriteLine("Data ready: {0} bytes", sp.BytesToRead);
+            byte[] rBuf = new byte[sp.BytesToRead];
+            int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
+            receiveBuffer.InsertRange(receiveBuffer.Count, rBuf);
+            receiveIdx += bytesRead;
+            Console.WriteLine("Data Received: {0} bytes", bytesRead);
+            foreach (var b in receiveBuffer)
+            {
+                Console.Write("0x{0:X2} ", b);
+            }
+            Console.WriteLine();
+        AGAIN:
+            while (receiveBuffer.Count > 0 && receiveBuffer[0] != 0x55)
+                receiveBuffer.RemoveAt(0);
+            //                    receiveBuffer.RemoveAt(0);
+            if (receiveBuffer.Count < 6)
+            {
+                // Console.WriteLine(" --- return - not enough data in buffer for a complete frame. : {0}", receiveBuffer.Count);
+                return;
+            }
+            receiveBuffer.RemoveAt(0); // Remove SYNC byte 0x55
+            byte hdrCrc8 = CalcCRC8(receiveBuffer, 4);
+            if (hdrCrc8 != receiveBuffer[4])
+            {
+                Console.WriteLine("CRC ERROR FOR PACKET HDR - or not a sync start\n");
+                goto AGAIN;
+            }
+            UInt16 pktLen = receiveBuffer[0];
+            pktLen *= 256;
+            pktLen += receiveBuffer[1];
+            //Console.WriteLine(" Packet len is {0}", pktLen);
+            Byte optLen = receiveBuffer[2];
+            Byte pktType = receiveBuffer[3];
+            if ((pktLen + optLen + 6) > receiveBuffer.Count)
+            {
+                // Not enough data yet.. push back header..
+                Console.WriteLine(" ABANDON FOR LATER - NOT ENOUGH DATA");
+                receiveBuffer.Insert(0, 0x55);
+                return;
+            }
+            List<byte> pktHdr = receiveBuffer.GetRange(0, 5);
+            receiveBuffer.RemoveRange(0, 5); // Remove hdr
+            Byte dtaCrc = CalcCRC8(receiveBuffer, pktLen + optLen);
+            if (dtaCrc == receiveBuffer[optLen + pktLen])
+            {
+                // Console.WriteLine(" ----- MATCH DATA CRC OK");
+                receiveBuffer.RemoveAt(receiveBuffer.Count - 1); // Remove checksum - we have checked it already
+                List<byte> payload = receiveBuffer.GetRange(0, pktLen);
+                List<byte> optPayload = receiveBuffer.GetRange(pktLen, optLen);
+                //                        receiveBuffer.GetRange
+                //                      receiveBuffer.CopyTo(0, payload, 0, pktLen);
+                //                    List<byte> buf = new List<byte>(receiveBuffer);
+                Console.WriteLine("Dispatching validated packet of {0} bytes and {1} bytes", payload.Count, optPayload.Count);
+                EnOceanPacket parsedPkt = EnOceanPacket.Parse(pktHdr[3], payload, optPayload);
+                //                        PacketEvent += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
+                if (PacketEventHandler != null)
+                    PacketEventHandler(parsedPkt);
+
+                receiveBuffer.RemoveRange(0, optLen + pktLen);
+                goto AGAIN;
+            }
+        }
+        public delegate void PacketEvent(EnOceanPacket pkt);
+        public event PacketEvent PacketEventHandler;
+
+    }
 }
