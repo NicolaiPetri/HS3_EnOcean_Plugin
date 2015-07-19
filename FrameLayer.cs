@@ -55,7 +55,12 @@ namespace EnOcean
 
         internal UInt32 getSource()
         {
-            throw new NotImplementedException();
+            UInt32 src = data[2];
+            src = (src * 256) + data[3];
+            src = (src * 256) + data[4];
+            src = (src * 256) + data[5];
+
+            return src;
         }
     }
     public class EnOceanFrameLayer

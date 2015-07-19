@@ -89,6 +89,8 @@ namespace HSPI_EnOcean
                 // Not found - create device
                 hsRootDevRefId = HS.NewDeviceRef("EnOcean Controller");
                 var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(hsRootDevRefId);
+                newDev.MISC_Set(HS, Enums.dvMISC.STATUS_ONLY);
+                newDev.set_Interface(HS, Constants.PLUGIN_STRING_ID);
                 newDev.set_Device_Type_String(HS, "EnOcean Controller");
                 HS.SaveEventsDevices();
                 return newDev;
@@ -165,6 +167,7 @@ namespace HSPI_EnOcean
 
         private object GetHSDeviceByAddress(UInt32 p)
         {
+            Console.WriteLine("Trying to locate device {0:X8} in HS DB", p);
             throw new NotImplementedException();
         }
         void JsonAddDeviceEvent(string Name, JObject JDest)
