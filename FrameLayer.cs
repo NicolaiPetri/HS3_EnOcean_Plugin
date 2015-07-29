@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace EnOcean
 {
-    public enum PacketType { TYPE_RESERVED = 0, TYPE_RADIO_ERP1 = 1, TYPE_RESPONSE, TYPE_RADIO_SUB_TEL, TYPE_EVENT, TYPE_COMMON_COMMAND, TYPE_SMART_ACK_COMMAND, TYPE_REMOTE_MAN_COMMAND, TYPE_RESERVED_ENOCEAN, TYPE_RADIO_MESSAGE, TYPE_RADIO_ERP2 };
+    public enum PacketType { RESERVED = 0, RADIO_ERP1 = 1, RESPONSE, RADIO_SUB_TEL, EVENT, COMMON_COMMAND, SMART_ACK_COMMAND, REMOTE_MAN_COMMAND, RESERVED_ENOCEAN, RADIO_MESSAGE, RADIO_ERP2 };
 
     public class EnOceanOptionalData
     {
@@ -42,11 +42,28 @@ namespace EnOcean
         {
             return new EnOceanOptionalData(this.optData);
         }
+        static EnOceanPacket MakePacket_CO_RD_VERSION()
+        {
+            var pkt = new EnOceanPacket(PacketType.COMMON_COMMAND, new byte[] { 0x03 }, null);
+            pkt.UpdateChecksums();
+            return pkt;
+        }
+        public void UpdateChecksums()
+        {
+            Console.WriteLine("MISSING Updatechecksums implementation!!!");
+            // FIXME:
+        }
         public EnOceanPacket(byte pkt_type, IList<byte> data, IList<byte> optData)
         {
             this.data = data;
             this.optData = optData;
             this.type = (PacketType)pkt_type;
+        }
+        public EnOceanPacket(PacketType pkt_type, IList<byte> data, IList<byte> optData)
+        {
+            this.data = data;
+            this.optData = optData;
+            this.type = pkt_type;
         }
         static public EnOceanPacket Parse(byte pkt_type, IList<byte> data, IList<byte> optData)
         {
@@ -176,7 +193,7 @@ namespace EnOcean
         {
             serialPort = new SerialPort(portName, 57600);
             serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-            serialPort.Open();
+            //serialPort.Open();
 
             commActive = true;
             //				commThreadHandle = new Thread(new ThreadStart(commThread));

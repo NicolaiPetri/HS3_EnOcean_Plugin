@@ -288,14 +288,18 @@ namespace HSPI_EnOcean
 //            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Charts", Name, "");
 //            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Chart", Name, "");
             hsHost.RegisterPage(Constants.PLUGIN_STRING_ID, Name, "");
-
+            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID+"_Interfaces", Name, "");
+//            hsHost.Register
 /*            WebPageDesc wpdCharts = new WebPageDesc();
             wpdCharts.link = Constants.PLUGIN_STRING_ID + "/Charts";
             wpdCharts.linktext = "Charts";
             wpdCharts.page_title = "Charts";
             wpdCharts.plugInName = Name;
             hsHostCB.RegisterLink(wpdCharts);
-*/
+*/              
+            WebPageDesc foo = new WebPageDesc();
+            
+
             WebPageDesc wpd = new WebPageDesc();
             wpd.link = Constants.PLUGIN_STRING_ID;
             wpd.linktext = "Configuration";
@@ -303,7 +307,14 @@ namespace HSPI_EnOcean
             wpd.plugInName = Name;
             hsHostCB.RegisterLink(wpd);
             hsHostCB.RegisterConfigLink(wpd);
-
+            
+            WebPageDesc wpi = new WebPageDesc();
+            wpi.link = Constants.PLUGIN_STRING_ID+"_Interfaces";
+            wpi.linktext = "Interfaces";
+            wpi.page_title = "Interfaces";
+            wpi.plugInName = Name;
+            hsHostCB.RegisterLink(wpi);
+            //hsHostCB.RegisterConfigLink(wpi);
 
             /*      WebPageDesc wpd3 = new WebPageDesc();
                   wpd3.link = Constants.PLUGIN_STRING_ID + "/Chart";
@@ -381,6 +392,7 @@ namespace HSPI_EnOcean
 
         public void SetIOMulti(System.Collections.Generic.List<CAPI.CAPIControl> colSend)
         {
+            Console.WriteLine("Set IO Multi : {0}", colSend[0]);
         }
 
         public void ShutdownIO()

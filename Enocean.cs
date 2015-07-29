@@ -68,30 +68,92 @@ namespace HSPI_EnOcean
 //            configurationChanged = false;
         }
         int hsRootDevRefId = 0;
+        public enum EnOceanDeviceType { Unknown=0, Controller, SimpleDevice };
+        public Scheduler.Classes.DeviceClass getHSDevice(EnOceanDeviceType type, string id="")
+        {
+                Scheduler.Classes.clsDeviceEnumeration devenum = HS.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
+
+                while (!devenum.Finished)
+                {
+                    Scheduler.Classes.DeviceClass dev = devenum.GetNext();
+                    if (dev.get_Interface(null) != Constants.PLUGIN_STRING_NAME)
+                        continue; // Not ours!
+                    if (dev.get_Device_Type_String(null) == "EnOcean " + type.ToString())
+                    {
+                        string hsAddr = dev.get_Address(null); //FIXME: Should probably not use address but a plugin value!
+
+                        if (id == hsAddr)
+                        {
+                            return dev;
+                        }
+                    }
+                }
+                return null;
+        } 
         public Scheduler.Classes.DeviceClass getHSRootDevice()
         {
             // Don't cache hsDevice directly - but we cache HS refId. 
             // We can invalidate root dev by setting hsRootDevRefId to 0
             if (hsRootDevRefId == 0)
             {
-                Scheduler.Classes.clsDeviceEnumeration devenum = HS.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
-
-                while (!devenum.Finished)
+                var hsDev = getHSDevice(EnOceanDeviceType.Controller);
+                if (hsDev != null)
                 {
-                    Scheduler.Classes.DeviceClass dev = devenum.GetNext();
-                    if (dev.get_Device_Type_String(null) == "EnOcean Controller")
-                    {
-                        hsRootDevRefId = dev.get_Ref(null);
-                        return dev;
-                    } 
+                    hsRootDevRefId = hsDev.get_Ref(null);
+                    return hsDev;
                 }
                 Console.WriteLine(" No EnOcean controller HS device - creating.");
                 // Not found - create device
                 hsRootDevRefId = HS.NewDeviceRef("EnOcean Controller");
                 var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(hsRootDevRefId);
-                newDev.MISC_Set(HS, Enums.dvMISC.STATUS_ONLY);
-                newDev.set_Interface(HS, Constants.PLUGIN_STRING_ID);
+//                newDev.MISC_Set(HS, Enums.dvMISC.);
+//                newDev.MISC_Set(HS, Enums.dvMISC.STATUS_ONLY);
+                newDev.set_Interface(HS, Constants.PLUGIN_STRING_NAME);
+                newDev.set_InterfaceInstance(HS, "");
+                newDev.set_Last_Change(HS, DateTime.Now);
+
                 newDev.set_Device_Type_String(HS, "EnOcean Controller");
+                var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+                DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+                DT.Device_Type = 33;
+                DT.Device_SubType = (int)DeviceTypeInfo_m.DeviceTypeInfo.eDeviceType_Plugin.Root;
+                newDev.set_DeviceType_Set(HS, DT);
+
+                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                v.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                v.Value = 0;
+                v.Status = "Off";
+                v.Render = Enums.CAPIControlType.Button;
+                v.Render_Location.Row = 1;
+                v.Render_Location.Column = 1;
+                v.ControlUse = ePairControlUse._Off;
+                HS.DeviceVSP_AddPair(hsRootDevRefId, v);
+
+                VSVGPairs.VSPair v2 = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                v2.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                v2.Value = 1;
+                v2.Status = "On";
+                v2.Render = Enums.CAPIControlType.Button;
+                v2.Render_Location.Row = 1;
+                v2.Render_Location.Column = 2;
+                v2.ControlUse = ePairControlUse._On;
+                HS.DeviceVSP_AddPair(hsRootDevRefId, v2);
+                /*         v = new VSVGPairs.VSPair(ePairStatusControl.Status);
+                         v.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                         v.Value = 2;
+                         v.Status = "Offline";
+                         v.Render = Enums.CAPIControlType.Values;
+                         HS.DeviceVSP_AddPair(hsRootDevRefId, v);
+                         v = new VSVGPairs.VSPair(ePairStatusControl.Status);
+                         v.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                         v.Value = 3;
+                         v.Status = "Unknown";
+                         v.Render = Enums.CAPIControlType.Values;
+                         newDev.DeviceVSP_AddPair(hsRootDevRefId, v);*/
+                newDev.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+                newDev.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
+                newDev.set_DeviceType_Set(HS, DT);
+//                newDev.set_Address(HS, "NA");
                 HS.SaveEventsDevices();
                 return newDev;
             }
@@ -117,6 +179,12 @@ namespace HSPI_EnOcean
             var extraData = rootDev.get_PlugExtraData_Get(HS);
             if (extraData == null)
                 extraData = new PlugExtraData.clsPlugExtraData();
+            var typeStr = (string)extraData.GetNamed("EnOcean Type");
+            if (typeStr == null) {
+                Console.WriteLine("No type on device - adding");
+                extraData.AddNamed("EnOcean Type", "Controller");
+                rootDev.set_PlugExtraData_Set(HS, extraData);
+            } 
             var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
             if (dataStr == null) {
                 Console.WriteLine("No json data on device - adding");
@@ -125,10 +193,6 @@ namespace HSPI_EnOcean
             } else {
                 config = JObject.Parse(dataStr);
                 Console.WriteLine("Loaded config: {0}", config.ToString());
-            }
-            if (config["unknown_nodes"] == null)
-            {
-                config.Add("unknown_nodes", new JObject());
             }
             if (config["nodes"] == null)
             {
@@ -143,6 +207,7 @@ namespace HSPI_EnOcean
             } else {
                 setControllerStatus("Error!");
             }
+            GetHSDeviceByAddress(0x1234abcd);
         }
         void controller_PacketEvent(EnOceanPacket pkt)
         {
@@ -158,17 +223,45 @@ namespace HSPI_EnOcean
              * 
              * 1: Locate sender
              * (2: check destination - me or broadcast)
-             * 3: Add device to seen list or dispatch related event if device is configured
+             * 3: Add device to seen list or dispatch related event if device is 
+             * ed
              */
             
 
             //throw new NotImplementedException();
         }
-
-        private object GetHSDeviceByAddress(UInt32 p)
+        public JObject getSeenDevices()
         {
+            return config["nodes"].ToObject<JObject>() ;
+        }
+        private Scheduler.Classes.DeviceClass GetHSDeviceByAddress(UInt32 p)
+        {
+
             Console.WriteLine("Trying to locate device {0:X8} in HS DB", p);
-            throw new NotImplementedException();
+            var strAddr = p.ToString("x8");
+            var srcDev = getHSDevice(EnOceanDeviceType.SimpleDevice, strAddr);
+
+            if (srcDev == null)
+            {
+                Console.WriteLine("Unknown RF device - checking stuff!");
+                var un_list = (JObject)config["nodes"];
+                if (un_list[strAddr] != null)
+                {
+                    Console.WriteLine("Already added to known list");
+                    return null;
+                }
+                JObject nInfo = new JObject();
+                nInfo.Add("address", strAddr);
+                nInfo.Add("configured", false);
+                nInfo.Add("first_seen", DateTime.UtcNow);
+                un_list[strAddr] = nInfo;
+                return null;
+            }
+            else
+            {
+                return srcDev;
+            }
+//            throw new NotImplementedException();
         }
         void JsonAddDeviceEvent(string Name, JObject JDest)
         {

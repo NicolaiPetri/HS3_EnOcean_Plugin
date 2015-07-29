@@ -11,6 +11,8 @@ using NPossible.Common;
 //using HSCF;
 using HomeSeerAPI;
 using Scheduler;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Converters;
 
 namespace NPossible.Common
 {
@@ -135,6 +137,21 @@ namespace HSPI_EnOcean
         {
             mCore = pCore;
         }
+        public PageReturn Page_HS3_EnOcean_Interfaces(String pPageName, String pCleanName, NameValueCollection pArgs)
+        {
+            var stb = new StringBuilder();
+
+            string conf_node_id = pArgs.Get("configure_node");
+            stb.Append(DivStart("pluginpage", ""));
+
+            // Add message area for (ajax) errors
+            stb.Append(DivStart("errormessage", "class='errormessage'"));
+            stb.Append(DivEnd());
+
+            stb.Append(DivEnd());
+            return new PageReturn(stb.ToString(), false);
+        }
+
         public PageReturn PostHandler_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
             var stb = new StringBuilder();
@@ -144,6 +161,7 @@ namespace HSPI_EnOcean
         {
             var stb = new StringBuilder();
 
+            string conf_node_id = pArgs.Get("configure_node");
             stb.Append(DivStart("pluginpage", ""));
 
             // Add message area for (ajax) errors
@@ -152,21 +170,39 @@ namespace HSPI_EnOcean
 
             stb.Append(DivEnd());
             //AddBody(stb.ToString());
-            stb.Append(DivStart("configuration", ""));
-            stb.Append(FormStart("cfgForm", "cfgForm", "POST"));
+            if (conf_node_id != null)
+            {
+                stb.AppendLine(DivStart("configuration_"+conf_node_id, ""));
+                stb.AppendLine("<h2>Configuration for node " + conf_node_id + "</h2>");
+                clsJQuery.jqSelector ctrl = new clsJQuery.jqSelector("connector_authkey", "text", true);
+                ctrl.AddItem("Type", "", true); 
+
+                stb.AppendLine("TODO!");
+                stb.Append(DivEnd());
+                return new PageReturn(stb.ToString(), false);
+            }
+            stb.AppendLine(FormStart("cfgForm", "cfgForm", "POST"));
   //          clsJQuery.jqTextBox ctrlSourceName = new clsJQuery.jqTextBox("connector_name", "text", hsHost.GetINISetting("EnOcean", "name", "HS3 Connector") , pPageName, 64, true);
   //          clsJQuery.jqTextBox ctrlApiKey = new clsJQuery.jqTextBox("connector_authkey", "text", hsHost.GetINISetting("EnOcean", "authkey", "[please set me]"), pPageName, 64, true);
    //         clsJQuery.jqButton ctrlBtnTest  = new clsJQuery.jqButton("test_connection", "Check connection", pPageName, true);
-            stb.Append("<table cellpadding=\"0\" cellspacing=\"0\">\n");
+            stb.AppendLine("<h2>Known EnOcean devices</h2>\n");
+            stb.AppendLine("<table cellpadding=\"0\" cellspacing=\"0\" border=\"1\" style=\"width: 100%\">\n");
+            stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
+            foreach (JObject deviceInfo in mCore.getSeenDevices().Values())
+            {
+                stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
+                stb.AppendLine("<td><a href=\"?configure_node="+deviceInfo["address"]+"\">Configure</a></td>");
+                stb.Append("</tr>");
+            }
 //            stb.Append("<tr><td>Connector name</td><td>"+ctrlSourceName.Build()+"</td></tr>\n");
 //            stb.Append("<tr><td>Connector API Key</td><td>"+ctrlApiKey.Build()+"</td></tr>\n");
 //            stb.Append("<tr><td>Status</td><td>"+mCore.GetStatus().ToString()+"</td></tr>\n");
             //stb.Append("<tr><td>&nbsp;</td><td>"+ctrlBtnTest.Build()+"</td></tr>\n");
-            stb.Append("</table>");
-            
-            stb.Append(FormEnd());
+            stb.AppendLine("</table>");
+            stb.Append("<br/>");
+            stb.AppendLine(FormEnd());
 //            build_DeviceTypeCfgTable(stb);
-            stb.Append(DivEnd());
+            stb.AppendLine(DivEnd());
 
             return new PageReturn(stb.ToString(), false);
         }
