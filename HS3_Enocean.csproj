@@ -72,6 +72,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ComHelper.cs" />
     <Compile Include="Constants.cs" />
     <Compile Include="Enocean.cs" />
     <Compile Include="FrameLayer.cs" />

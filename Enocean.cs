@@ -32,21 +32,101 @@ namespace HSPI_EnOcean
         public Boolean pollDevice;
         //        public DeviceTypeSettings
     }
-    class EnOceanController
+
+    class EnOceanManager
     {
         IHSApplication HS;
         IAppCallbackAPI HSCB;
-//        Connector_Status Status;
-      //  bool configurationChanged = true;
-        string cloudKey;
-        string cloudName;
         JObject config;
         HSPI hspiInst;
-        public EnOceanController(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst)
+        List<EnOceanController> interfaceList = new List<EnOceanController>();
+        public EnOceanManager(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst)
         {
             hspiInst = pHspiInst;
             HS = pHsHost;
             HSCB = pHsCB;
+        //    Console.WriteLine("Encoding: {0}", System.Text.Encoding.Default);
+            //System.Text.Encoding.Default = System.Text.UTF8Encoding.Default;
+            //Thread queueHandlerTask = new Thread(new ThreadStart(this.QueueProcesserThread));
+            //queueHandlerTask.Start();
+        }
+        public void AddInterface(EnOceanController newInterface)
+        {
+            interfaceList.Add(newInterface);
+        }
+        public IList<EnOceanController> GetInterfaces()
+        {
+ 
+            return interfaceList;
+        }
+        public void Initialize()
+        {
+            Dictionary<int, Scheduler.Classes.DeviceClass> device_map = new Dictionary<int, Scheduler.Classes.DeviceClass>();
+            //            Dictionary<int, JObject> json_map = new Dictionary<int, JObject>();
+            Dictionary<int, bool> processed = new Dictionary<int, bool>();
+
+            config = new JObject();
+            /*var rootDev = getHSRootDevice();
+            var extraData = rootDev.get_PlugExtraData_Get(HS);
+            if (extraData == null)
+                extraData = new PlugExtraData.clsPlugExtraData();
+            var typeStr = (string)extraData.GetNamed("EnOcean Type");
+            if (typeStr == null)
+            {
+                Console.WriteLine("No type on device - adding");
+                extraData.AddNamed("EnOcean Type", "Controller");
+                rootDev.set_PlugExtraData_Set(HS, extraData);
+            }
+            var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
+            if (dataStr == null)
+            {
+                Console.WriteLine("No json data on device - adding");
+                extraData.AddNamed("EnOcean Cfg", config.ToString());
+                rootDev.set_PlugExtraData_Set(HS, extraData);
+            }
+            else
+            {
+                config = JObject.Parse(dataStr);
+                Console.WriteLine("Loaded config: {0}", config.ToString());
+            }
+            if (config["nodes"] == null)
+            {
+                config.Add("nodes", new JObject());
+            }
+
+            setControllerStatus("Initializing");
+            controller = new EnOceanFrameLayer();
+            if (controller.Open("com23"))
+            {
+                controller.PacketEventHandler += controller_PacketEvent;
+                setControllerStatus("Active");
+            }
+            else
+            {
+                setControllerStatus("Error!");
+            }
+            GetHSDeviceByAddress(0x1234abcd);
+            */
+        }
+
+    }
+    class EnOceanController
+    {
+        IHSApplication HS;
+        IAppCallbackAPI HSCB;
+        String portName;
+        String internalStatus;
+        //        Connector_Status Status;
+      //  bool configurationChanged = true;
+        JObject config;
+        HSPI hspiInst;
+        public EnOceanController(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst, JObject initCfg)
+        {
+            hspiInst = pHspiInst;
+            HS = pHsHost;
+            HSCB = pHsCB;
+            config = initCfg;
+            portName = (string)config["portname"];
         //    Console.WriteLine("Encoding: {0}", System.Text.Encoding.Default);
             //System.Text.Encoding.Default = System.Text.UTF8Encoding.Default;
             //Thread queueHandlerTask = new Thread(new ThreadStart(this.QueueProcesserThread));
@@ -63,8 +143,8 @@ namespace HSPI_EnOcean
         }
         protected void ReloadConfig()
         {
-            cloudName = HS.GetINISetting("EnOcean", "name", "HS3 Connector");
-            cloudKey = HS.GetINISetting("EnOcean", "authkey", "[missing]");
+            //cloudName = HS.GetINISetting("EnOcean", "name", "HS3 Connector");
+            //cloudKey = HS.GetINISetting("EnOcean", "authkey", "[missing]");
 //            configurationChanged = false;
         }
         int hsRootDevRefId = 0;
@@ -164,6 +244,7 @@ namespace HSPI_EnOcean
         public void setControllerStatus(string status)
         {
             var rootDev = getHSRootDevice();
+            internalStatus = status;
             HS.SetDeviceString(rootDev.get_Ref(null), status, false);
         }
         EnOceanFrameLayer controller;
@@ -174,7 +255,7 @@ namespace HSPI_EnOcean
             //            Dictionary<int, JObject> json_map = new Dictionary<int, JObject>();
             Dictionary<int, bool> processed = new Dictionary<int, bool>();
 
-            config = new JObject();
+            //config = new JObject();
             var rootDev = getHSRootDevice();
             var extraData = rootDev.get_PlugExtraData_Get(HS);
             if (extraData == null)
@@ -185,7 +266,7 @@ namespace HSPI_EnOcean
                 extraData.AddNamed("EnOcean Type", "Controller");
                 rootDev.set_PlugExtraData_Set(HS, extraData);
             } 
-            var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
+/*            var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
             if (dataStr == null) {
                 Console.WriteLine("No json data on device - adding");
                 extraData.AddNamed("EnOcean Cfg", config.ToString());
@@ -194,6 +275,7 @@ namespace HSPI_EnOcean
                 config = JObject.Parse(dataStr);
                 Console.WriteLine("Loaded config: {0}", config.ToString());
             }
+ */
             if (config["nodes"] == null)
             {
                 config.Add("nodes", new JObject());
@@ -439,5 +521,15 @@ namespace HSPI_EnOcean
                 return false;
             }
         }
+
+       public string getPortName()
+        {
+            return portName;
+        }
+
+       public string getControllerStatus()
+       {
+           return internalStatus;
+       }
     }
 }

@@ -20,7 +20,7 @@ namespace HSPI_EnOcean
 
     public class HSPI : IPlugInAPI
     {
-        private HSPI_EnOcean.EnOceanController mCore;
+        private HSPI_EnOcean.EnOceanManager mCore;
         private Dictionary<int, DateTime> mLastDSUpdate = new Dictionary<int, DateTime>();
         PageBuilder mPageBuilder;
 
@@ -259,7 +259,7 @@ namespace HSPI_EnOcean
             {
                 Console.WriteLine("Could not create directory: {0}", e.Message);
             }*/
-            mCore = new EnOceanController(hsHost, hsHostCB, this);
+            mCore = new EnOceanManager(hsHost, hsHostCB, this);
             mCore.Initialize();
 /*
             Scheduler.Classes.clsDeviceEnumeration devenum = hsHost.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
@@ -282,7 +282,7 @@ namespace HSPI_EnOcean
             //hsHostCB.RegisterEventCB(Enums.HSEvent.STRING_CHANGE, Name, "");
             hsHostCB.RegisterEventCB(Enums.HSEvent.GENERIC, Name, "");
 
-            this.mPageBuilder = new PageBuilder(hsHost, hsHostCB, mCore);
+            this.mPageBuilder = new PageBuilder(hsHost, hsHostCB, this, mCore);
 
 //            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Configuration", Name, "");
 //            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Charts", Name, "");

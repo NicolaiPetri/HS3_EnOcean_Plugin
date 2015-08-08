@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Ports;
 using System.Text;
 using System.Linq;
 using System.Web;
@@ -38,13 +39,15 @@ namespace NPossible.Common
     {
         protected IHSApplication hsHost;
         protected IAppCallbackAPI hsHostCB;
+        protected HSPI_EnOcean.HSPI pluginInstance;
         //		private StringBuilder stb;
 
-        public PageBuilderBase(IHSApplication pHS, IAppCallbackAPI pHSCB)
+        public PageBuilderBase(IHSApplication pHS, IAppCallbackAPI pHSCB, HSPI_EnOcean.HSPI plugInInst)
             : base("dummy")
         {
             hsHost = pHS;
             hsHostCB = pHSCB;
+            pluginInstance = plugInInst;
             reset();
         }
 
@@ -84,6 +87,7 @@ namespace NPossible.Common
             {
                 AddHeader(hsHost.GetPageHeader(pPageName, pPageNameClean, "", "", false, true));
                 AddBody(page.content);
+                this.RefreshIntervalMilliSeconds = 10;
                 suppressDefaultFooter = true;
                 AddFooter(hsHost.GetPageFooter());
                 return BuildPage();
@@ -131,9 +135,9 @@ namespace HSPI_EnOcean
 {
     class PageBuilder : PageBuilderBase
     {
-        private HSPI_EnOcean.EnOceanController mCore;
-        public PageBuilder(IHSApplication pHS, IAppCallbackAPI pHSCB, EnOceanController pCore)
-            : base(pHS, pHSCB)
+        private HSPI_EnOcean.EnOceanManager mCore;
+        public PageBuilder(IHSApplication pHS, IAppCallbackAPI pHSCB, HSPI_EnOcean.HSPI pluginInstance, EnOceanManager pCore)
+            : base(pHS, pHSCB, pluginInstance)
         {
             mCore = pCore;
         }
@@ -149,13 +153,77 @@ namespace HSPI_EnOcean
             stb.Append(DivEnd());
 
             stb.Append(DivEnd());
+
+            var ifList = mCore.GetInterfaces();
+
+            if (ifList.Count == 0)
+            {
+                stb.Append("<b>No interfaces added - please add interface below</b>");
+            }
+            else
+            {
+                stb.AppendLine("<table style=\"width: 400px\">");
+                stb.AppendLine("<tr><th>Interface port</th><th>Status</th></tr>");
+                foreach (var iface in ifList)
+                {
+                    stb.AppendLine("<tr><td>" + iface.getPortName() + "</td><td>" + iface.getControllerStatus() + "</td></tr>");
+                }
+                stb.AppendLine("</table>");
+                // TODO: Show table with existing interfaces and status!
+            }
+
+            clsJQuery.jqButton ctrlBtnAddInterface  = new clsJQuery.jqButton("add_interface", "Add interface", pPageName, true);
+//            var ctrlComPortList = new clsJQuery.jqDropList("com_selector", "Add interface", true);
+            var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
+//            ctrlComPortList.items.Add("Test");
+            stb.AppendLine(FormStart("addForm", pPageName, "POST"));
+            stb.AppendLine("<select name=\"com_selector\">\n");
+            foreach (var p in SerialPort.GetPortNames()) {
+                var validPort = true;
+//                ctrlComPortList.AddItem(p, p, false);
+                //ctrlComPortList.items.Add(p);
+                foreach (var i in ifList)
+                {
+                    if (i.getPortName() == p)
+                        validPort = false;
+                }
+                if (validPort)
+                    stb.AppendLine("\t<option value=\"" + p + "\">" + p + "</option>\n");
+            }
+            stb.AppendLine("</select>\n");
+            stb.Append(ctrlComPortList.Build());
+            stb.Append(ctrlBtnAddInterface.Build());
+            stb.AppendLine(FormEnd());
             return new PageReturn(stb.ToString(), false);
         }
 
         public PageReturn PostHandler_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
             var stb = new StringBuilder();
-            return new PageReturn("");
+            return new PageReturn(""); ;
+        }
+        public PageReturn PostHandler_HS3_EnOcean_Interfaces(String pPageName, String pCleanName, NameValueCollection pArgs)
+        {
+            var stb = new StringBuilder();
+            if (pArgs.Get("add_interface") != null)
+            {
+                String port = pArgs.Get("com_selector");
+                Console.WriteLine("Adding interface: " + port);
+                var ifList = mCore.GetInterfaces();
+                foreach (var i in ifList)
+                {
+                    if (i.getPortName() == port)
+                        return new PageReturn("ERROR - port exist");
+                }
+
+                var initCfg = new JObject();
+                initCfg.Add("portname", port);
+                var newCtrl = new EnOceanController(hsHost, hsHostCB, pluginInstance, initCfg);
+                newCtrl.Initialize();
+                mCore.AddInterface(newCtrl);
+                
+            }
+            return new PageReturn(RedirectPage(PageName));
         }
         public PageReturn Page_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
@@ -188,12 +256,12 @@ namespace HSPI_EnOcean
             stb.AppendLine("<h2>Known EnOcean devices</h2>\n");
             stb.AppendLine("<table cellpadding=\"0\" cellspacing=\"0\" border=\"1\" style=\"width: 100%\">\n");
             stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
-            foreach (JObject deviceInfo in mCore.getSeenDevices().Values())
+/*            foreach (JObject deviceInfo in mCore.getSeenDevices().Values())
             {
                 stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
                 stb.AppendLine("<td><a href=\"?configure_node="+deviceInfo["address"]+"\">Configure</a></td>");
                 stb.Append("</tr>");
-            }
+            }*/
 //            stb.Append("<tr><td>Connector name</td><td>"+ctrlSourceName.Build()+"</td></tr>\n");
 //            stb.Append("<tr><td>Connector API Key</td><td>"+ctrlApiKey.Build()+"</td></tr>\n");
 //            stb.Append("<tr><td>Status</td><td>"+mCore.GetStatus().ToString()+"</td></tr>\n");
