@@ -12,12 +12,17 @@ namespace EnOcean
     {
         private IList<byte> list;
 
+        public int getSize() {
+            return list.Count;
+        }
         public EnOceanOptionalData(IList<byte> list)
         {
             this.list = list;
         }
         public PacketType getType()
         {
+            if (list == null || list.Count == 0)
+                return PacketType.RESERVED;
             return (PacketType)list[0];
         }
         public UInt32 getDestination()
@@ -37,20 +42,51 @@ namespace EnOcean
         private IList<byte> data;
         private IList<byte> optData;
         private PacketType type;
-
+        private Byte[] rawPacket;
+        public Byte[] GetData()
+        {
+            var f = new Byte[this.data.Count];
+            this.data.CopyTo(f, 0);
+            return f;
+        }
         public EnOceanOptionalData Get_OptionalData()
         {
             return new EnOceanOptionalData(this.optData);
         }
-        static EnOceanPacket MakePacket_CO_RD_VERSION()
+        public PacketType getType() {
+            return type;
+
+        }
+        static public EnOceanPacket MakePacket_CO_RD_VERSION()
         {
             var pkt = new EnOceanPacket(PacketType.COMMON_COMMAND, new byte[] { 0x03 }, null);
-            pkt.UpdateChecksums();
+            pkt.BuildPacket();
             return pkt;
         }
-        public void UpdateChecksums()
+        public Byte[] BuildPacket() 
         {
-            Console.WriteLine("MISSING Updatechecksums implementation!!!");
+            if (optData == null)
+                optData = new byte[0];
+            var ms = new MemoryStream();
+            var bw = new BinaryWriter(ms);
+            bw.Write((byte)0x55); // Sync byte
+            bw.Write((byte)(data.Count >> 8));
+            bw.Write((byte)(data.Count & 0xFF));
+//            bw.Write((ushort)data.Count); // Data length 
+            bw.Write((byte)optData.Count); // optData length
+            bw.Write((byte)type); // Packet Type
+            //byte[] binHeader = new byte[4];
+            //ms.GetBuffer().CopyTo(binHeader, 1);
+            bw.Write(EnOceanChecksum.CalcCRC8(ms.GetBuffer(), 4, 1));
+            foreach (var b in data)
+                bw.Write(b);
+            foreach (var b in optData)
+                bw.Write(b);
+            bw.Write(EnOceanChecksum.CalcCRC8(ms.GetBuffer(), (int)(ms.Length - 6), 6));
+            this.rawPacket = ms.GetBuffer();
+            Array.Resize<byte>(ref rawPacket, (int)ms.Length);
+//            this.rawPacket.Length = (int)ms.Length;
+            return this.rawPacket;
             // FIXME:
         }
         public EnOceanPacket(byte pkt_type, IList<byte> data, IList<byte> optData)
@@ -80,9 +116,9 @@ namespace EnOcean
             return src;
         }
     }
-    public class EnOceanFrameLayer
+    public class EnOceanChecksum
     {
-        byte[] u8CRC8Table = {
+        static byte[] u8CRC8Table = {
 0x00, 0x07, 0x0e, 0x09, 0x1c, 0x1b, 0x12, 0x15,
 0x38, 0x3f, 0x36, 0x31, 0x24, 0x23, 0x2a, 0x2d,
 0x70, 0x77, 0x7e, 0x79, 0x6c, 0x6b, 0x62, 0x65,
@@ -117,18 +153,24 @@ namespace EnOcean
 0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 };
         //#define proccrc8(u8CRC, u8Data) (u8CRC8Table[u8CRC ^ u8Data])
-        byte proccrc8(byte u8CRC, byte u8Data)
+        static byte proccrc8(byte u8CRC, byte u8Data)
         {
             return u8CRC8Table[u8CRC ^ u8Data];
         }
-        public byte CalcCRC8(IList<byte> data, int len)
+        static public byte CalcCRC8(IList<byte> data, int len = 0, int offset=0)
         {
+            if (len == 0)
+                len = data.Count - offset;
             byte u8CRC = 0;
-            for (int i = 0; i < len; i++)
+            for (int i = offset; i < offset+len; i++)
                 u8CRC = proccrc8(u8CRC, data[i]);
             //Console.WriteLine("CRC8 = 0x{0:x}", u8CRC);
             return u8CRC;
         }
+
+    }
+    public class EnOceanFrameLayer
+    {
         SerialPort serialPort;
         Thread commThreadHandle;
         Boolean commActive;
@@ -136,7 +178,20 @@ namespace EnOcean
         public EnOceanFrameLayer()
         {
             //                public delegate int Dispatch(EnOceanPacket pkt);
-            PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
+            PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); }; // TESTING
+            PacketEventHandler += (EnOceanPacket p) => { 
+                Console.WriteLine(" PKT HANDLER 2");
+                foreach (var listener in PacketListeners)
+                {
+                    if (listener.handler(p))
+                    {
+                        listener.succeeded = true;
+                        listener.waitHandle.Set();
+                    }
+
+                    //if (listener)
+                }
+            };
 
 
         }
@@ -157,10 +212,50 @@ namespace EnOcean
         }
         //			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         //			int waitSendResult = 0;
-
-
-        bool SendFrame(byte[] frame)
+    //    struct PacketListeners;
+        public class PacketListener {
+            public PacketListener(IReceiveHandler pHandler)
+            {
+                this.handler = pHandler;
+                succeeded = false;
+                packet = null;
+                waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+            }
+            public IReceiveHandler handler;
+            public Boolean succeeded;
+            public EnOceanPacket packet;
+            public EventWaitHandle waitHandle;
+        }
+        List<PacketListener> PacketListeners = new List<PacketListener>();
+        //public IReceiveHandler ReceiveHandlers;
+        public delegate bool IReceiveHandler(EnOceanPacket packet);
+//        public bool SendAndWait()
+        public bool Send(EnOceanPacket packet, IReceiveHandler handler, int retries = 3, int timeout = 1000)
         {
+            var rawPacket = packet.BuildPacket();
+            var pl = new PacketListener(handler);
+            PacketListeners.Add(pl);
+            AGAIN:
+            // TESTING
+            SendFrame(rawPacket);
+            pl.waitHandle.WaitOne(timeout);
+            if (pl.succeeded)
+            {
+                PacketListeners.Remove(pl);
+                return true;
+            }
+            else
+            {
+                if (retries-- > 0)
+                    goto AGAIN;
+                PacketListeners.Remove(pl);
+                return false;
+                // Packet not what he wanted.. wait for next!
+            }
+        }
+        public bool SendFrame(byte[] frame)
+        {
+            serialPort.Write(frame, 0, frame.Length);
             /*				lock (commLock) {
                                 byte[] completeFrame = new byte[frame.Length+3];
                                 completeFrame[0] = ZConstants.Z_SOF;
@@ -193,7 +288,7 @@ namespace EnOcean
         {
             serialPort = new SerialPort(portName, 57600);
             serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-            //serialPort.Open();
+            serialPort.Open();
 
             commActive = true;
             //				commThreadHandle = new Thread(new ThreadStart(commThread));
@@ -246,7 +341,7 @@ namespace EnOcean
                 return;
             }
             receiveBuffer.RemoveAt(0); // Remove SYNC byte 0x55
-            byte hdrCrc8 = CalcCRC8(receiveBuffer, 4);
+            byte hdrCrc8 = EnOceanChecksum.CalcCRC8(receiveBuffer, 4);
             if (hdrCrc8 != receiveBuffer[4])
             {
                 Console.WriteLine("CRC ERROR FOR PACKET HDR - or not a sync start\n");
@@ -267,7 +362,7 @@ namespace EnOcean
             }
             List<byte> pktHdr = receiveBuffer.GetRange(0, 5);
             receiveBuffer.RemoveRange(0, 5); // Remove hdr
-            Byte dtaCrc = CalcCRC8(receiveBuffer, pktLen + optLen);
+            Byte dtaCrc = EnOceanChecksum.CalcCRC8(receiveBuffer, pktLen + optLen);
             if (dtaCrc == receiveBuffer[optLen + pktLen])
             {
                 // Console.WriteLine(" ----- MATCH DATA CRC OK");

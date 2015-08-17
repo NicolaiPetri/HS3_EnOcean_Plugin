@@ -220,6 +220,7 @@ namespace HSPI_EnOcean
                 initCfg.Add("portname", port);
                 var newCtrl = new EnOceanController(hsHost, hsHostCB, pluginInstance, initCfg);
                 newCtrl.Initialize();
+                newCtrl.SaveConfiguration();
                 mCore.AddInterface(newCtrl);
                 
             }
@@ -256,6 +257,16 @@ namespace HSPI_EnOcean
             stb.AppendLine("<h2>Known EnOcean devices</h2>\n");
             stb.AppendLine("<table cellpadding=\"0\" cellspacing=\"0\" border=\"1\" style=\"width: 100%\">\n");
             stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
+            foreach (var iface in mCore.GetInterfaces())
+            {
+                foreach (JObject deviceInfo in iface.getSeenDevices().Values()) 
+            {
+                stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
+                stb.AppendLine("<td><a href=\"?configure_node="+deviceInfo["address"]+"\">Configure</a></td>");
+                stb.Append("</tr>");
+            }
+
+            }
 /*            foreach (JObject deviceInfo in mCore.getSeenDevices().Values())
             {
                 stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
