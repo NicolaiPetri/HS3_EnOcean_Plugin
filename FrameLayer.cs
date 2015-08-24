@@ -169,12 +169,30 @@ namespace EnOcean
         }
 
     }
-    public class EnOceanFrameLayer
+    public class EnOceanFrameLayer : IDisposable
     {
         SerialPort serialPort;
         Thread commThreadHandle;
         Boolean commActive;
         object commLock = new object();
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // dispose managed resources
+                serialPort.Close();
+                serialPort = null;
+            }
+            // free native resources
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         public EnOceanFrameLayer()
         {
             //                public delegate int Dispatch(EnOceanPacket pkt);
@@ -213,13 +231,29 @@ namespace EnOcean
         //			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         //			int waitSendResult = 0;
     //    struct PacketListeners;
-        public class PacketListener {
+        public class PacketListener : IDisposable {
             public PacketListener(IReceiveHandler pHandler)
             {
                 this.handler = pHandler;
                 succeeded = false;
                 packet = null;
                 waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+            }
+            protected virtual void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    // dispose managed resources
+                    waitHandle.Close();
+                    waitHandle = null;
+                }
+                // free native resources
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
             }
             public IReceiveHandler handler;
             public Boolean succeeded;
@@ -288,7 +322,14 @@ namespace EnOcean
         {
             serialPort = new SerialPort(portName, 57600);
             serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-            serialPort.Open();
+            if (false)
+            {
+                serialPort.Open();
+            }
+            else
+            {
+                Console.WriteLine("DEBUG: port disabled");
+            }
 
             commActive = true;
             //				commThreadHandle = new Thread(new ThreadStart(commThread));
@@ -383,7 +424,7 @@ namespace EnOcean
             }
         }
         public delegate void PacketEvent(EnOceanPacket pkt);
-        public event PacketEvent PacketEventHandler;
+        public PacketEvent PacketEventHandler;
 
     }
 }

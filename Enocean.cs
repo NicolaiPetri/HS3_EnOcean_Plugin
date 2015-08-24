@@ -12,9 +12,9 @@ using HSCF;
 using HomeSeerAPI;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
-using EnOcean;
+using HSPI_EnOcean;
 
-namespace HSPI_EnOcean
+namespace EnOcean
 {
     public class DeviceState
     {
@@ -39,7 +39,7 @@ namespace HSPI_EnOcean
         IAppCallbackAPI HSCB;
 //        JObject config;
         HSPI hspiInst;
-        List<EnOceanController> interfaceList = new List<EnOceanController>();
+        Dictionary<String,EnOceanController> interfaceList = new Dictionary<String, EnOceanController>();
         public EnOceanManager(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst)
         {
             hspiInst = pHspiInst;
@@ -52,12 +52,15 @@ namespace HSPI_EnOcean
         }
         public void AddInterface(EnOceanController newInterface)
         {
-            interfaceList.Add(newInterface);
+            interfaceList.Add(newInterface.ControllerId, newInterface);
         }
-        public IList<EnOceanController> GetInterfaces()
+        public EnOceanController GetInterfaceById(String interfaceId)
         {
- 
-            return interfaceList;
+            return interfaceList[interfaceId];
+        }
+        public IEnumerable<EnOceanController> GetInterfaces()
+        {
+            return interfaceList.Values;
         }
         public void Initialize()
         {
@@ -141,7 +144,7 @@ namespace HSPI_EnOcean
         }
 
     }
-    class EnOceanController
+    public class EnOceanController : IDisposable
     {
         IHSApplication HS;
         IAppCallbackAPI HSCB;
@@ -149,6 +152,7 @@ namespace HSPI_EnOcean
         String internalStatus;
         //        Connector_Status Status;
       //  bool configurationChanged = true;
+//        Scheduler.Classes.DeviceClass
         JObject config;
         HSPI hspiInst;
         public EnOceanController(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst, JObject initCfg)
@@ -158,6 +162,7 @@ namespace HSPI_EnOcean
             HSCB = pHsCB;
             config = initCfg;
             portName = (string)config["portname"];
+            UniqueControllerId = (string)config["unique_id"];
         //    Console.WriteLine("Encoding: {0}", System.Text.Encoding.Default);
             //System.Text.Encoding.Default = System.Text.UTF8Encoding.Default;
             //Thread queueHandlerTask = new Thread(new ThreadStart(this.QueueProcesserThread));
@@ -287,12 +292,26 @@ namespace HSPI_EnOcean
         }
         public void setControllerStatus(string status)
         {
-            var rootDev = getHSRootDevice();
             internalStatus = status;
             HS.SetDeviceString(rootDev.get_Ref(null), status, false);
         }
         EnOceanFrameLayer controller;
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // dispose managed resources
+                controller.Close();
+            }
+            // free native resources
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
         Scheduler.Classes.DeviceClass rootDev;
         public void Initialize()
         {
@@ -333,6 +352,7 @@ namespace HSPI_EnOcean
                 setControllerStatus("Active");
             } else {
                 setControllerStatus("Error!");
+                GetHSDeviceByAddress(0x1234abcd);
                 return;
             }
             var p = EnOceanPacket.MakePacket_CO_RD_VERSION();
@@ -343,15 +363,19 @@ namespace HSPI_EnOcean
                 Console.WriteLine("Ret Code = {0}", br.ReadByte());
                 Console.WriteLine("App Version {0}", br.ReadUInt32());
                 Console.WriteLine("API Version {0}", br.ReadUInt32());
-                Console.WriteLine("Chip ID {0}", br.ReadUInt32());
+                var uniqueControllerId = br.ReadUInt32().ToString("x8");
+                this.UniqueControllerId = uniqueControllerId;
+                Console.WriteLine("Chip ID {0}", uniqueControllerId);
                 Console.WriteLine("Chip Version {0}", br.ReadUInt32());
                 var d = Encoding.UTF8.GetString(br.ReadBytes(16), 0, 16);
                 Console.WriteLine("APP NAME: {0}", d);
                 //TODO: Parse app description
                 return true;
             });
-            //GetHSDeviceByAddress(0x1234abcd);
+            GetHSDeviceByAddress(0x1234abcd);
         }
+        String UniqueControllerId;
+        public String ControllerId { get { if (UniqueControllerId == null) return "unknown"; return UniqueControllerId; } }
         void controller_PacketEvent(EnOceanPacket pkt)
         {
             Console.WriteLine("Got packet: {0}, opt type {1}", pkt, pkt.Get_OptionalData().getType());
@@ -398,6 +422,7 @@ namespace HSPI_EnOcean
                 nInfo.Add("configured", false);
                 nInfo.Add("first_seen", DateTime.UtcNow);
                 un_list[strAddr] = nInfo;
+                SaveConfiguration();
                 return null;
             }
             else
@@ -599,6 +624,7 @@ namespace HSPI_EnOcean
            var extraData = rootDev.get_PlugExtraData_Get(HS);
            //extraData.AddNamed("EnOcean Type", "Controller");
            rootDev.set_PlugExtraData_Set(HS, extraData);
+           config["unique_id"] = UniqueControllerId;
             var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
             //if (dataStr == null) {
               //  Console.WriteLine("No json data on device - adding");

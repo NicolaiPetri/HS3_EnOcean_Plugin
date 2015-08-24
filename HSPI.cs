@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 using System.Threading;
 using HomeSeerAPI;
-
+using EnOcean;
 //using HomeSeerAPI.VGVSPair;
 
 //using SensoristAPI;
@@ -18,9 +18,9 @@ using HomeSeerAPI;
 namespace HSPI_EnOcean
 {
 
-    public class HSPI : IPlugInAPI
+    public class HSPI : IPlugInAPI, IDisposable
     {
-        private HSPI_EnOcean.EnOceanManager mCore;
+        private EnOcean.EnOceanManager mCore;
         private Dictionary<int, DateTime> mLastDSUpdate = new Dictionary<int, DateTime>();
         PageBuilder mPageBuilder;
 
@@ -42,6 +42,23 @@ namespace HSPI_EnOcean
         public bool HasTriggers { get; private set; }
 
         public int TriggerCount { get; private set; }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // dispose managed resources
+                mPageBuilder.Dispose();
+                mPageBuilder = null;
+            }
+            // free native resources
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
         // HS3 Plugin methods
         public int AccessLevel()
         {

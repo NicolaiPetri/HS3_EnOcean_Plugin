@@ -16,7 +16,7 @@ using HSCF.Communication.ScsServices.Service;
 namespace HSPI_EnOcean    
 {
     using EnOcean;
-    public class Manager
+    public class Manager : IDisposable
     {
         IScsServiceClient<IHSApplication> client;
         IScsServiceClient<IAppCallbackAPI> clientCB;
@@ -24,6 +24,24 @@ namespace HSPI_EnOcean
         IAppCallbackAPI hsHostCB;
 
         HSPI pluginInst;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // dispose managed resources
+                pluginInst.Dispose();
+                pluginInst = null;
+            }
+            // free native resources
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+ 
         public void run()
         {
             string[] cmdArgs = Environment.GetCommandLineArgs();

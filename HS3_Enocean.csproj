@@ -74,8 +74,10 @@
   <ItemGroup>
     <Compile Include="ComHelper.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="DeviceTypes.cs" />
     <Compile Include="Enocean.cs" />
     <Compile Include="FrameLayer.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HSPI.cs" />
     <Compile Include="PageBuilder.cs" />
     <Compile Include="Program.cs" />
