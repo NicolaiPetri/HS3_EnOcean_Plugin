@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Drawing;
+//using System.Net;
+//using System.Drawing;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
@@ -208,7 +208,6 @@ namespace EnOcean
                     if (dev.get_Device_Type_String(null) == "EnOcean " + type.ToString())
                     {
                         string hsAddr = dev.get_Address(null); //FIXME: Should probably not use address but a plugin value!
-
                         if (id == hsAddr)
                         {
                             return dev;
@@ -216,7 +215,13 @@ namespace EnOcean
                     }
                 }
                 return null;
-        } 
+        }
+        Dictionary<String, IEnOceanDevice> RegisteredDevices = new Dictionary<string, IEnOceanDevice>();
+        public bool RegisterDevice(IEnOceanDevice dev)
+        {
+            RegisteredDevices.Add(dev.DeviceId, dev);
+            return true;
+        }
         public Scheduler.Classes.DeviceClass getHSRootDevice()
         {
             // Don't cache hsDevice directly - but we cache HS refId. 
@@ -313,7 +318,16 @@ namespace EnOcean
             GC.SuppressFinalize(this);
         }
         Scheduler.Classes.DeviceClass rootDev;
-        public void Initialize()
+
+        public void Close() {
+            if (controller != null)
+            {
+                Console.WriteLine("Close controller: {0}", getPortName());
+                controller.Close();
+                controller = null;
+            }
+        }
+        public Boolean Initialize()
         {
             Dictionary<int, Scheduler.Classes.DeviceClass> device_map = new Dictionary<int, Scheduler.Classes.DeviceClass>();
             //            Dictionary<int, JObject> json_map = new Dictionary<int, JObject>();
@@ -351,9 +365,9 @@ namespace EnOcean
                 controller.PacketEventHandler += controller_PacketEvent;
                 setControllerStatus("Active");
             } else {
-                setControllerStatus("Error!");
+                setControllerStatus("Port open error!");
                 GetHSDeviceByAddress(0x1234abcd);
-                return;
+                return false;
             }
             var p = EnOceanPacket.MakePacket_CO_RD_VERSION();
             controller.Send(p, (EnOceanPacket recvPacket) => {
@@ -372,7 +386,13 @@ namespace EnOcean
                 //TODO: Parse app description
                 return true;
             });
+            int timeout = 30;
+            while (timeout-- > 0 && this.UniqueControllerId == "Unknown") {
+                Console.WriteLine("Waiting for controller id!");
+                Thread.Sleep(100);
+            } 
             GetHSDeviceByAddress(0x1234abcd);
+            return this.UniqueControllerId != "Unknown";
         }
         String UniqueControllerId;
         public String ControllerId { get { if (UniqueControllerId == null) return "unknown"; return UniqueControllerId; } }
@@ -383,6 +403,14 @@ namespace EnOcean
                 var odata = pkt.Get_OptionalData();
                 Console.WriteLine(" - destination was {0:X8}", odata.getDestination());
                 var hsDev = GetHSDeviceByAddress(pkt.getSource());
+                if (hsDev != null)
+                {
+                    Console.WriteLine("Located hsDev : {0}", hsDev.get_Name(null));
+                }
+                else
+                {
+                    Console.WriteLine("Did not locate {0:x8}", pkt.getSource());
+                }
             }
             //pkt.Get_OptionalData().
 
@@ -404,8 +432,8 @@ namespace EnOcean
         private Scheduler.Classes.DeviceClass GetHSDeviceByAddress(UInt32 p)
         {
 
-            Console.WriteLine("Trying to locate device {0:X8} in HS DB", p);
-            var strAddr = p.ToString("x8");
+            var strAddr = this.ControllerId+":"+p.ToString("x8");
+            Console.WriteLine("Trying to locate device {0} in HS DB", strAddr);
             var srcDev = getHSDevice(EnOceanDeviceType.SimpleDevice, strAddr);
 
             if (srcDev == null)
@@ -566,7 +594,7 @@ namespace EnOcean
         End If
     Next
         */
- 
+#if notyet 
         public bool doPostRequest(String pUrl, string Payload)
         {
             try
@@ -607,7 +635,7 @@ namespace EnOcean
                 return false;
             }
         }
-
+#endif
        public string getPortName()
         {
             return portName;

@@ -322,7 +322,7 @@ namespace EnOcean
         {
             serialPort = new SerialPort(portName, 57600);
             serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-            if (false)
+            if (true)
             {
                 serialPort.Open();
             }

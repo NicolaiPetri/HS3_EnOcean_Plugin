@@ -176,6 +176,7 @@ namespace HSPI_EnOcean
             var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
 //            ctrlComPortList.items.Add("Test");
             stb.AppendLine(FormStart("addForm", pPageName, "POST"));
+            stb.AppendLine("<input type=\"text\" name=\"name\" value=\"Primary Controller\">");
             stb.AppendLine("<select name=\"com_selector\">\n");
             foreach (var p in SerialPort.GetPortNames()) {
                 var validPort = true;
@@ -191,23 +192,24 @@ namespace HSPI_EnOcean
             }
             stb.AppendLine("</select>\n");
             stb.Append(ctrlComPortList.Build());
-            stb.Append(ctrlBtnAddInterface.Build());
+            stb.Append("<input type=\"submit\" name=\"add_interface\" value=\"Add\">");
             stb.AppendLine(FormEnd());
             return new PageReturn(stb.ToString(), false);
         }
 
         public PageReturn PostHandler_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
-            var stb = new StringBuilder();
+  //          var stb = new StringBuilder();
             var node_id = pArgs.Get("configure_node");
             var controller_id = pArgs.Get("controller_id");
             var node_type = pArgs.Get("device_profile");
-            stb.AppendLine("Node id = " + node_id);
-            stb.AppendLine("controller id = " + controller_id);
-            stb.AppendLine("Node type = " + node_type);
+  //          stb.AppendLine("Node id = " + node_id);
+  //          stb.AppendLine("controller id = " + controller_id);
+  //          stb.AppendLine("Node type = " + node_type);
             var ctrl = mCore.GetInterfaceById(controller_id);
-            EnOcean.DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, new JObject());
-            return new PageReturn(stb.ToString(), true);
+            DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, new JObject());
+            return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
+//            return new PageReturn(stb.ToString(), true);
         }
         public PageReturn PostHandler_HS3_EnOcean_Interfaces(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
@@ -226,12 +228,20 @@ namespace HSPI_EnOcean
                 var initCfg = new JObject();
                 initCfg.Add("portname", port);
                 var newCtrl = new EnOceanController(hsHost, hsHostCB, pluginInstance, initCfg);
-                newCtrl.Initialize();
-                newCtrl.SaveConfiguration();
-                mCore.AddInterface(newCtrl);
+                if (newCtrl.Initialize())
+                {
+                    newCtrl.SaveConfiguration();
+                    mCore.AddInterface(newCtrl);
+                }
+                else
+                {
+                    Console.WriteLine("Error adding interface: could not get id");
+                    newCtrl.Close();
+                }
                 
             }
-            return new PageReturn("foo", true) ;
+            return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
+//            return new PageReturn("foo", true);
         }
         public PageReturn Page_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
@@ -253,7 +263,7 @@ namespace HSPI_EnOcean
                 stb.AppendLine("<h2>Configuration for node " + conf_node_id + "</h2>");
 //                clsJQuery.jqSelector ctrl = new cblsJQuery.jqSelector("connector_authkey", "text", true);
   //              ctrl.AddItem("Type", "", true);
-                stb.AppendLine("<form name=\"cfgForm\" method=\"post\">");
+                stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\""+pPageName+"\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"controller_id\" value=\"" + conf_controller_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node\" value=\"" + conf_node_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node_test\" value=\"" + conf_node_id + "\">");
