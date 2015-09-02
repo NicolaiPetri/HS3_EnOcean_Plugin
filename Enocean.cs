@@ -184,12 +184,20 @@ namespace EnOcean
 //            configurationChanged = false;
         }
         int hsRootDevRefId = 0;
-        public enum EnOceanDeviceType { Unknown=0, Controller, SimpleDevice };
+        public enum EnOceanDeviceType { Unknown=0, Controller, SimpleDevice, ChildDevice };
 
         public Scheduler.Classes.DeviceClass createHSDevice(String Name, EnOceanDeviceType type, String id = "")
         {
             var devRefId = HS.NewDeviceRef(Name);
             var newDev = (Scheduler.Classes.DeviceClass)HS.GetDeviceByRef(devRefId);
+
+            var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+            DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
+            DT.Device_Type = 33;
+            DT.Device_SubType = (int)type;
+                //(int)DeviceTypeInfo_m.DeviceTypeInfo.eDeviceType_Plugin.Root;
+            newDev.set_DeviceType_Set(HS, DT);
+
             newDev.set_Address(HS, id);
             newDev.set_Interface(HS, Constants.PLUGIN_STRING_NAME);
             newDev.set_InterfaceInstance(HS, "");
@@ -241,16 +249,17 @@ namespace EnOcean
                 var newDev = createHSDevice("EnOcean controller: " + getPortName(), EnOceanDeviceType.Controller, getPortName());
 //                newDev.MISC_Set(HS, Enums.dvMISC.);
 //                newDev.MISC_Set(HS, Enums.dvMISC.STATUS_ONLY);
-                newDev.set_Interface(HS, Constants.PLUGIN_STRING_NAME);
-                newDev.set_InterfaceInstance(HS, "");
-                newDev.set_Last_Change(HS, DateTime.Now);
+//                newDev.set_Interface(HS, Constants.PLUGIN_STRING_NAME);
+//                newDev.set_InterfaceInstance(HS, "");
+//                newDev.set_Last_Change(HS, DateTime.Now);
 
                 newDev.set_Device_Type_String(HS, "EnOcean Controller");
-                var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
+/*                var DT = new DeviceTypeInfo_m.DeviceTypeInfo();
                 DT.Device_API = DeviceTypeInfo_m.DeviceTypeInfo.eDeviceAPI.Plug_In;
                 DT.Device_Type = 33;
                 DT.Device_SubType = (int)DeviceTypeInfo_m.DeviceTypeInfo.eDeviceType_Plugin.Root;
                 newDev.set_DeviceType_Set(HS, DT);
+ * */
 
 /*                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Both);
                 v.PairType = VSVGPairs.VSVGPairType.SingleValue;
@@ -286,7 +295,7 @@ namespace EnOcean
                          newDev.DeviceVSP_AddPair(hsRootDevRefId, v);*/
                 newDev.MISC_Set(HS, Enums.dvMISC.NO_LOG);
                 newDev.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
-                newDev.set_DeviceType_Set(HS, DT);
+//                newDev.set_DeviceType_Set(HS, DT);
 //                newDev.set_Address(HS, "NA");
                 HS.SaveEventsDevices();
                 return newDev;
@@ -392,7 +401,42 @@ namespace EnOcean
                 Thread.Sleep(100);
             } 
             GetHSDeviceByAddress(0x1234abcd);
+            LoadChildDevices();
             return this.UniqueControllerId != "Unknown";
+        }
+        void LoadChildDevices()
+        {
+ //           var ctrl = mCore.GetInterfaceById(controller_id);
+   //         DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, new JObject());
+            Scheduler.Classes.clsDeviceEnumeration devenum = HS.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
+
+            while (!devenum.Finished)
+            {
+                Scheduler.Classes.DeviceClass hsDev = devenum.GetNext();
+                if (hsDev.get_Interface(null) != Constants.PLUGIN_STRING_NAME)
+                    continue; // Not ours!
+                var extraData = hsDev.get_PlugExtraData_Get(HS);
+//                continue; // Not ours!
+  //              var extraData = dev.get_PlugExtraData_Get(HS);
+                if (extraData == null)
+                    extraData = new PlugExtraData.clsPlugExtraData();
+                var typeStr = (string)extraData.GetNamed("EnOcean Type");
+                if (typeStr == null)
+                    Console.WriteLine("Warning: No device type set on child device");
+                var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
+                var childConfig = new JObject();
+                if (dataStr != null)
+                    childConfig = JObject.Parse(dataStr);
+                if (hsDev.get_Address(null).StartsWith(ControllerId))
+                {
+                    Console.WriteLine("DT : {0} vs {1}", hsDev.get_Device_Type_String(null), EnOceanDeviceType.SimpleDevice.ToString());
+                    if (hsDev.get_Device_Type_String(null) != "EnOcean "+ EnOceanDeviceType.SimpleDevice.ToString())
+                        continue;
+                    DeviceTypes.CreateDeviceInstance(HS, this, hsDev.get_Address(null), (string)childConfig["device_type"], childConfig);
+                    Console.WriteLine("Found child device: {0} {1}", hsDev.get_Name(null), hsDev.get_Address(null));
+                }
+            }
+
         }
         String UniqueControllerId;
         public String ControllerId { get { if (UniqueControllerId == null) return "unknown"; return UniqueControllerId; } }
@@ -402,6 +446,20 @@ namespace EnOcean
             if (pkt.Get_OptionalData() != null && pkt.Get_OptionalData().getSize() > 0) {
                 var odata = pkt.Get_OptionalData();
                 Console.WriteLine(" - destination was {0:X8}", odata.getDestination());
+                String childDevId = ControllerId + ":" + pkt.getSource().ToString("x8");
+//                var devInst = RegisteredDevices[ControllerId + ":" + odata.getDestination().ToString("x8")];
+                if (RegisteredDevices.ContainsKey(childDevId))
+                {
+                    var devInst = RegisteredDevices[childDevId];
+                    Console.WriteLine("Located hsDev : {0}", devInst.DeviceId);
+                    devInst.ProcessPacket(pkt);
+                }
+                else
+                {
+                    AddSeenDevice(childDevId);
+                    Console.WriteLine("Did not locate {0:x8}", childDevId);
+                }
+#if old
                 var hsDev = GetHSDeviceByAddress(pkt.getSource());
                 if (hsDev != null)
                 {
@@ -411,6 +469,7 @@ namespace EnOcean
                 {
                     Console.WriteLine("Did not locate {0:x8}", pkt.getSource());
                 }
+#endif
             }
             //pkt.Get_OptionalData().
 
@@ -429,6 +488,16 @@ namespace EnOcean
         {
             return config["nodes"].ToObject<JObject>() ;
         }
+        private void AddSeenDevice(String strAddr) {
+            var un_list = (JObject)config["nodes"];
+            JObject nInfo = new JObject();
+                nInfo.Add("address", strAddr);
+                nInfo.Add("configured", false);
+                nInfo.Add("first_seen", DateTime.UtcNow);
+                un_list[strAddr] = nInfo;
+                SaveConfiguration();
+
+        }
         private Scheduler.Classes.DeviceClass GetHSDeviceByAddress(UInt32 p)
         {
 
@@ -445,12 +514,7 @@ namespace EnOcean
                     Console.WriteLine("Already added to known list");
                     return null;
                 }
-                JObject nInfo = new JObject();
-                nInfo.Add("address", strAddr);
-                nInfo.Add("configured", false);
-                nInfo.Add("first_seen", DateTime.UtcNow);
-                un_list[strAddr] = nInfo;
-                SaveConfiguration();
+                AddSeenDevice(strAddr);
                 return null;
             }
             else

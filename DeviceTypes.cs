@@ -23,7 +23,7 @@ namespace EnOcean
         protected Scheduler.Classes.DeviceClass hsDevice;
         JObject deviceConfig;
         protected IHSApplication HS;
-        EnOceanController Controller;
+        protected EnOceanController Controller;
         public String DeviceId { get; set; }
 
         public abstract void AddOrUpdateHSDeviceProperties();
@@ -48,25 +48,20 @@ namespace EnOcean
                 deviceConfig["name"] = DeviceId;
                 hsDevice = Controller.createHSDevice((string)deviceConfig["name"], EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
                 hsDevice.set_Device_Type_String(HS, "EnOcean " + EnOceanController.EnOceanDeviceType.SimpleDevice.ToString());
-
+                hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+                hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
                 AddOrUpdateHSDeviceProperties();
-                Controller.SaveConfiguration();
+                SaveConfiguration();
             }
         }
         public void SaveConfiguration()
         {
             var extraData = hsDevice.get_PlugExtraData_Get(HS);
-            //extraData.AddNamed("EnOcean Type", "Controller");
-            //hsDev.set_PlugExtraData_Set(HS, extraData);
-            //var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
-            //if (dataStr == null) {
-            //  Console.WriteLine("No json data on device - adding");
+            if (extraData == null)
+                extraData = new PlugExtraData.clsPlugExtraData();
             extraData.AddNamed("EnOcean Cfg", deviceConfig.ToString());
             hsDevice.set_PlugExtraData_Set(HS, extraData);
-//            hsDev
-            //FIXME: Save config to homeseer
-            HS.SaveEventsDevices();
-
+            Controller.SaveConfiguration();
         }
     }
     class EnOceanButtonDevice : EnOceanDeviceBase
@@ -74,59 +69,92 @@ namespace EnOcean
         public EnOceanButtonDevice(IHSApplication HS, EnOceanController Ctrl, String deviceId, JObject config) :
             base(HS, Ctrl, deviceId, config)
         {
-//            EnOceanDeviceBase(HS,  )
-            
             Console.WriteLine("Init of EnOceanButtonDevice : {0}", deviceId);
+        }
+        public bool SetButtonState(int button, Boolean pressed)
+        {
+            String btnDeviceId = DeviceId + ":" + button;
+            var btnDevice = Controller.getHSDevice(EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
+            if (btnDevice == null)
+            {
+                
+                Console.WriteLine("No button device for btn {0} - creating");
+                btnDevice = Controller.createHSDevice(hsDevice.get_Name(null) + " Button " + button, EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
+                btnDevice.set_Device_Type_String(HS, "EnOcean " + EnOceanController.EnOceanDeviceType.ChildDevice.ToString());
+                btnDevice.set_Relationship(HS, Enums.eRelationship.Child);
+                btnDevice.AssociatedDevice_Add(HS, hsDevice.get_Ref(null));
 
+                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                v.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                v.Value = 0;
+                v.Status = "Released";
+                v.Render = Enums.CAPIControlType.Button;
+                v.Render_Location.Row = 1;
+                v.Render_Location.Column = 1;
+                v.ControlUse = ePairControlUse._Off;
+                HS.DeviceVSP_AddPair(btnDevice.get_Ref(null), v);
+
+                VSVGPairs.VSPair v2 = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                v2.PairType = VSVGPairs.VSVGPairType.SingleValue;
+                v2.Value = 1;
+                v2.Status = "Pressed";
+                v2.Render = Enums.CAPIControlType.Button;
+                v2.Render_Location.Row = 1;
+                v2.Render_Location.Column = 2;
+                v2.ControlUse = ePairControlUse._On;
+                HS.DeviceVSP_AddPair(btnDevice.get_Ref(null), v2);
+                btnDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+                btnDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
+
+                Controller.SaveConfiguration();
+            }
+            HS.SetDeviceValueByRef(btnDevice.get_Ref(null), pressed ? 1 : 0, true);
+            return true;
         }
         public override bool ProcessPacket(EnOceanPacket packet)
         {
-            Console.WriteLine("Specific handler for packet!! FIXME:");
+            Console.WriteLine("Specific handler for packet!! FIXME: dta5={0}", packet.GetData()[5]);
+            int button = 0xff;
+            byte cmd = packet.GetData()[1];
+            switch (cmd) {
+                case 0x0:
+                    button = 0; // Released
+                    for (int bc = 1; bc < 5; bc++)
+                    {
+                        SetButtonState(bc, false);
+                    }
+                     return true;
+                case 0x10:
+                  button = 1;
+                    break;
+                case 0x30:
+                  button = 2;
+                    break;
+                case 0x50:
+                  button = 3;
+                    break;
+                case 0x70:
+                  button = 4;
+                    break;
+                default:
+                    Console.WriteLine("Unknown button: {0}", cmd);
+                    return false;
+            }
+            SetButtonState(button, true);
+//            if (cmd == 0x10) 
+            //            this.
+//            int state = 0;
+//            btnDevice.set
+
             return true;
         }
         public override void AddOrUpdateHSDeviceProperties()
         {
             Console.WriteLine("FIXME: Adding HS Device control status");
-            /*                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Both);
-                v.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                v.Value = 0;
-                v.Status = "Off";
-                v.Render = Enums.CAPIControlType.Button;
-                v.Render_Location.Row = 1;
-                v.Render_Location.Column = 1;
-                v.ControlUse = ePairControlUse._Off;
-                HS.DeviceVSP_AddPair(hsRootDevRefId, v);
+            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+            hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
-                VSVGPairs.VSPair v2 = new VSVGPairs.VSPair(ePairStatusControl.Both);
-                v2.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                v2.Value = 1;
-                v2.Status = "On";
-                v2.Render = Enums.CAPIControlType.Button;
-                v2.Render_Location.Row = 1;
-                v2.Render_Location.Column = 2;
-                v2.ControlUse = ePairControlUse._On;
-                HS.DeviceVSP_AddPair(hsRootDevRefId, v2);
- */
-                /*         v = new VSVGPairs.VSPair(ePairStatusControl.Status);
-                         v.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                         v.Value = 2;
-                         v.Status = "Offline";
-                         v.Render = Enums.CAPIControlType.Values;
-                         HS.DeviceVSP_AddPair(hsRootDevRefId, v);
-                         v = new VSVGPairs.VSPair(ePairStatusControl.Status);
-                         v.PairType = VSVGPairs.VSVGPairType.SingleValue;
-                         v.Value = 3;
-                         v.Status = "Unknown";
-                         v.Render = Enums.CAPIControlType.Values;
-                         newDev.DeviceVSP_AddPair(hsRootDevRefId, v);*/
-                hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
-                hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
-//                hsDevice.set_DeviceType_Set(HS, DT);
-//                newDev.set_Address(HS, "NA");
-               // HS.SaveEventsDevices();
-             //   return newDev;
-          //  }
-
+                SaveConfiguration();
         }
     }
     public class DeviceTypes
@@ -146,9 +174,7 @@ namespace EnOcean
                         Controller.RegisterDevice(newDev);
                         }
                         break;
-
                 }
-
             }
             else
             {
@@ -156,7 +182,7 @@ namespace EnOcean
             }
             return null;
         }
-        static public bool ProcessCommand(EnOceanPacket packet, Scheduler.Classes.DeviceClass hsDev)
+        public bool ProcessCommand(EnOceanPacket packet, Scheduler.Classes.DeviceClass hsDev)
         {
             Console.WriteLine("Processing command : {0}", packet.getType().ToString());
             return true;
