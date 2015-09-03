@@ -9,7 +9,6 @@ using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Globalization;
 using NPossible.Common;
-//using HSCF;
 using HomeSeerAPI;
 using Scheduler;
 using Newtonsoft.Json.Linq;
@@ -172,16 +171,12 @@ namespace HSPI_EnOcean
             // TODO: Show table with existing interfaces and status!
 
             clsJQuery.jqButton ctrlBtnAddInterface  = new clsJQuery.jqButton("add_interface", "Add interface", pPageName, true);
-//            var ctrlComPortList = new clsJQuery.jqDropList("com_selector", "Add interface", true);
             var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
-//            ctrlComPortList.items.Add("Test");
             stb.AppendLine(FormStart("addForm", pPageName, "POST"));
             stb.AppendLine("<input type=\"text\" name=\"name\" value=\"Primary Controller\">");
             stb.AppendLine("<select name=\"com_selector\">\n");
             foreach (var p in SerialPort.GetPortNames()) {
                 var validPort = true;
-//                ctrlComPortList.AddItem(p, p, false);
-                //ctrlComPortList.items.Add(p);
                 foreach (var i in ifList)
                 {
                     if (i.getPortName() == p)
@@ -199,20 +194,15 @@ namespace HSPI_EnOcean
 
         public PageReturn PostHandler_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
-  //          var stb = new StringBuilder();
             var node_id = pArgs.Get("configure_node");
             var controller_id = pArgs.Get("controller_id");
             var node_type = pArgs.Get("device_profile");
             var node_name = pArgs.Get("node_name");
-            //          stb.AppendLine("Node id = " + node_id);
-  //          stb.AppendLine("controller id = " + controller_id);
-  //          stb.AppendLine("Node type = " + node_type);
             var ctrl = mCore.GetInterfaceById(controller_id);
             var newConfig = new JObject();
             newConfig["node_name"] = node_name;
             DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, newConfig);
             return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
-//            return new PageReturn(stb.ToString(), true);
         }
         public PageReturn PostHandler_HS3_EnOcean_Interfaces(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
@@ -244,7 +234,6 @@ namespace HSPI_EnOcean
                 
             }
             return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
-//            return new PageReturn("foo", true);
         }
         public PageReturn Page_HS3_EnOcean(String pPageName, String pCleanName, NameValueCollection pArgs)
         {
@@ -259,17 +248,13 @@ namespace HSPI_EnOcean
             stb.Append(DivEnd());
 
             stb.Append(DivEnd());
-            //AddBody(stb.ToString());
             if (conf_node_id != null)
             {
                 stb.AppendLine(DivStart("configuration_"+conf_node_id, ""));
                 stb.AppendLine("<h2>Configuration for node " + conf_node_id + "</h2>");
-//                clsJQuery.jqSelector ctrl = new cblsJQuery.jqSelector("connector_authkey", "text", true);
-  //              ctrl.AddItem("Type", "", true);
                 stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\""+pPageName+"\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"controller_id\" value=\"" + conf_controller_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node\" value=\"" + conf_node_id + "\">");
-//                stb.AppendLine("<input type=\"hidden\" name=\"configure_node_test\" value=\"" + conf_node_id + "\">");
                 stb.AppendLine("Please give device a name: ");
                 stb.AppendLine("<input type=\"text\" name=\"node_name\" value=\"" + conf_node_id + "\">");
                 stb.AppendLine("Please select DeviceProfile: ");
@@ -287,12 +272,8 @@ namespace HSPI_EnOcean
                 stb.Append(DivEnd());
                 return new PageReturn(stb.ToString(), true);
             }
-//            stb.AppendLine(FormStart("cfgForm", "cfgForm", "POST"));
             stb.AppendLine("<form name=\"cfgForm\" method=\"POST\">");
 
-  //          clsJQuery.jqTextBox ctrlSourceName = new clsJQuery.jqTextBox("connector_name", "text", hsHost.GetINISetting("EnOcean", "name", "HS3 Connector") , pPageName, 64, true);
-  //          clsJQuery.jqTextBox ctrlApiKey = new clsJQuery.jqTextBox("connector_authkey", "text", hsHost.GetINISetting("EnOcean", "authkey", "[please set me]"), pPageName, 64, true);
-   //         clsJQuery.jqButton ctrlBtnTest  = new clsJQuery.jqButton("test_connection", "Check connection", pPageName, true);
             stb.AppendLine("<h2>Known EnOcean devices</h2>\n");
             stb.AppendLine("<table cellpadding=\"0\" cellspacing=\"0\" border=\"1\" style=\"width: 100%\">\n");
             stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
@@ -306,21 +287,9 @@ namespace HSPI_EnOcean
             }
 
             }
-/*            foreach (JObject deviceInfo in mCore.getSeenDevices().Values())
-            {
-                stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
-                stb.AppendLine("<td><a href=\"?configure_node="+deviceInfo["address"]+"\">Configure</a></td>");
-                stb.Append("</tr>");
-            }*/
-//            stb.Append("<tr><td>Connector name</td><td>"+ctrlSourceName.Build()+"</td></tr>\n");
-//            stb.Append("<tr><td>Connector API Key</td><td>"+ctrlApiKey.Build()+"</td></tr>\n");
-//            stb.Append("<tr><td>Status</td><td>"+mCore.GetStatus().ToString()+"</td></tr>\n");
-            //stb.Append("<tr><td>&nbsp;</td><td>"+ctrlBtnTest.Build()+"</td></tr>\n");
             stb.AppendLine("</table>");
             stb.Append("<br/>");
-//            stb.AppendLine(FormEnd());
             stb.AppendLine("</form>");
-            //            build_DeviceTypeCfgTable(stb);
             stb.AppendLine(DivEnd());
 
             return new PageReturn(stb.ToString(), false);

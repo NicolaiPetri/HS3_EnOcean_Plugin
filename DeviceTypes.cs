@@ -31,7 +31,6 @@ namespace EnOcean
         {
             HS = Hs;
             DeviceId = deviceId;
-            //            hsDevice = Hs;
             deviceConfig = config;
             Controller = Ctrl;
             deviceType = (EDeviceTypes)(int)config["device_type"];
@@ -154,11 +153,6 @@ namespace EnOcean
                     return true;
             }
             SetButtonState(button, true);
-//            if (cmd == 0x10) 
-            //            this.
-//            int state = 0;
-//            btnDevice.set
-
             return true;
         }
         public override void AddOrUpdateHSDeviceProperties()

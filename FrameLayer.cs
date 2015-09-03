@@ -72,11 +72,8 @@ namespace EnOcean
             bw.Write((byte)0x55); // Sync byte
             bw.Write((byte)(data.Count >> 8));
             bw.Write((byte)(data.Count & 0xFF));
-//            bw.Write((ushort)data.Count); // Data length 
             bw.Write((byte)optData.Count); // optData length
             bw.Write((byte)type); // Packet Type
-            //byte[] binHeader = new byte[4];
-            //ms.GetBuffer().CopyTo(binHeader, 1);
             bw.Write(EnOceanChecksum.CalcCRC8(ms.GetBuffer(), 4, 1));
             foreach (var b in data)
                 bw.Write(b);
@@ -85,9 +82,7 @@ namespace EnOcean
             bw.Write(EnOceanChecksum.CalcCRC8(ms.GetBuffer(), (int)(ms.Length - 6), 6));
             this.rawPacket = ms.GetBuffer();
             Array.Resize<byte>(ref rawPacket, (int)ms.Length);
-//            this.rawPacket.Length = (int)ms.Length;
             return this.rawPacket;
-            // FIXME:
         }
         public EnOceanPacket(byte pkt_type, IList<byte> data, IList<byte> optData)
         {
@@ -152,7 +147,6 @@ namespace EnOcean
 0xde, 0xd9, 0xd0, 0xd7, 0xc2, 0xc5, 0xcc, 0xcb,
 0xe6, 0xe1, 0xe8, 0xef, 0xfa, 0xfd, 0xf4, 0xf3
 };
-        //#define proccrc8(u8CRC, u8Data) (u8CRC8Table[u8CRC ^ u8Data])
         static byte proccrc8(byte u8CRC, byte u8Data)
         {
             return u8CRC8Table[u8CRC ^ u8Data];
@@ -195,7 +189,6 @@ namespace EnOcean
 
         public EnOceanFrameLayer()
         {
-            //                public delegate int Dispatch(EnOceanPacket pkt);
             PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); }; // TESTING
             PacketEventHandler += (EnOceanPacket p) => { 
                 Console.WriteLine(" PKT HANDLER 2");
@@ -206,8 +199,6 @@ namespace EnOcean
                         listener.succeeded = true;
                         listener.waitHandle.Set();
                     }
-
-                    //if (listener)
                 }
             };
 
@@ -216,21 +207,13 @@ namespace EnOcean
         void commThread()
         {
             Console.WriteLine("Starting communications thread");
-            //				byte[] verGet = new byte[] { ZConstants.Z_REQUEST, 0x15};
-            //				SendFrame(verGet);
-            //serialPort.Write(verGet, 0, verGet.Length);
-            //serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
             while (commActive)
             {
                 Thread.Sleep(500);
                 //				SendFrame(verGet);
             }
-            //Console.WriteLine("Bytes avail is : {0}", serialPort.BytesToRead);
             Console.WriteLine("Ending comm thread");
         }
-        //			EventWaitHandle waitSendEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
-        //			int waitSendResult = 0;
-    //    struct PacketListeners;
         public class PacketListener : IDisposable {
             public PacketListener(IReceiveHandler pHandler)
             {
@@ -261,9 +244,7 @@ namespace EnOcean
             public EventWaitHandle waitHandle;
         }
         List<PacketListener> PacketListeners = new List<PacketListener>();
-        //public IReceiveHandler ReceiveHandlers;
         public delegate bool IReceiveHandler(EnOceanPacket packet);
-//        public bool SendAndWait()
         public bool Send(EnOceanPacket packet, IReceiveHandler handler, int retries = 3, int timeout = 1000)
         {
             var rawPacket = packet.BuildPacket();
@@ -290,23 +271,6 @@ namespace EnOcean
         public bool SendFrame(byte[] frame)
         {
             serialPort.Write(frame, 0, frame.Length);
-            /*				lock (commLock) {
-                                byte[] completeFrame = new byte[frame.Length+3];
-                                completeFrame[0] = ZConstants.Z_SOF;
-                                completeFrame[1] = (byte)(frame.Length+1);
-                                frame.CopyTo(completeFrame, 2);
-                                completeFrame[completeFrame.Length-1] = CalculateFrameChecksum(completeFrame);
-                                //= new byte[] { ZConstants.Z_SOF, 3, ZConstants.Z_REQUEST, 0x15};
-                                serialPort.Write(completeFrame, 0, completeFrame.Length);
-                                //serialPort.Write(new byte[] { CalculateFrameChecksum(verGet)},0,1);
-            //					while (1) {
-            //						ackCount = 
-            //					}
-                                if (waitSendEvent.WaitOne(2000) && waitSendResult==1)
-                                    return true;
-                                return false;
-                            }
-             */
             return false;
         }
         byte CalculateFrameChecksum(byte[] frameData)
@@ -332,8 +296,6 @@ namespace EnOcean
             }
 
             commActive = true;
-            //				commThreadHandle = new Thread(new ThreadStart(commThread));
-            //				commThreadHandle.Start();
             return serialPort.IsOpen;
         }
         public bool Close()
@@ -352,16 +314,13 @@ namespace EnOcean
             }
             return false;
         }
-        //			byte[] receiveBuffer = new byte[256]; // FIXME: Should be higher .. maybe
         List<byte> receiveBuffer = new List<byte>();
         int receiveIdx = 0;
         void onCommDataReceived(
             object sender,
             SerialDataReceivedEventArgs args)
         {
-            //try {
             SerialPort sp = (SerialPort)sender;
-            //Console.WriteLine("Data ready: {0} bytes", sp.BytesToRead);
             byte[] rBuf = new byte[sp.BytesToRead];
             int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
             receiveBuffer.InsertRange(receiveBuffer.Count, rBuf);
@@ -375,10 +334,8 @@ namespace EnOcean
         AGAIN:
             while (receiveBuffer.Count > 0 && receiveBuffer[0] != 0x55)
                 receiveBuffer.RemoveAt(0);
-            //                    receiveBuffer.RemoveAt(0);
             if (receiveBuffer.Count < 6)
             {
-                // Console.WriteLine(" --- return - not enough data in buffer for a complete frame. : {0}", receiveBuffer.Count);
                 return;
             }
             receiveBuffer.RemoveAt(0); // Remove SYNC byte 0x55
@@ -391,7 +348,6 @@ namespace EnOcean
             UInt16 pktLen = receiveBuffer[0];
             pktLen *= 256;
             pktLen += receiveBuffer[1];
-            //Console.WriteLine(" Packet len is {0}", pktLen);
             Byte optLen = receiveBuffer[2];
             Byte pktType = receiveBuffer[3];
             if ((pktLen + optLen + 6) > receiveBuffer.Count)
@@ -410,12 +366,8 @@ namespace EnOcean
                 receiveBuffer.RemoveAt(receiveBuffer.Count - 1); // Remove checksum - we have checked it already
                 List<byte> payload = receiveBuffer.GetRange(0, pktLen);
                 List<byte> optPayload = receiveBuffer.GetRange(pktLen, optLen);
-                //                        receiveBuffer.GetRange
-                //                      receiveBuffer.CopyTo(0, payload, 0, pktLen);
-                //                    List<byte> buf = new List<byte>(receiveBuffer);
                 Console.WriteLine("Dispatching validated packet of {0} bytes and {1} bytes", payload.Count, optPayload.Count);
                 EnOceanPacket parsedPkt = EnOceanPacket.Parse(pktHdr[3], payload, optPayload);
-                //                        PacketEvent += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); };
                 if (PacketEventHandler != null)
                     PacketEventHandler(parsedPkt);
 

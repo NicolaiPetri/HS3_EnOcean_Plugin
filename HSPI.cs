@@ -6,14 +6,7 @@ using Newtonsoft.Json.Linq;
 using System.Threading;
 using HomeSeerAPI;
 using EnOcean;
-//using HomeSeerAPI.VGVSPair;
 
-//using SensoristAPI;
-
-//using System.Web.HttpUtility;
-
-
-//using Microsoft.Win32;
 [assembly: System.Security.SecurityRules(System.Security.SecurityRuleSet.Level1)]
 namespace HSPI_EnOcean
 {
@@ -24,14 +17,11 @@ namespace HSPI_EnOcean
         private Dictionary<int, DateTime> mLastDSUpdate = new Dictionary<int, DateTime>();
         PageBuilder mPageBuilder;
 
-        //public string Name = "Sensorist HS3 Plugin";
-        //public bool HSCOMPort = false;
-        //	private Dictionary<int, int> mSensorInstance2HsRef;
         private string mFriendlyName = Constants.PLUGIN_STRING_NAME;
         public bool Running = true;
         public IHSApplication hsHost;
         public IAppCallbackAPI hsHostCB;
-        //	Dictionary<int, SensoristAPI.Connector> cloudInstances;
+
         // HS3 Plugin properties
         public string Name { get; private set; }
 
@@ -68,7 +58,6 @@ namespace HSPI_EnOcean
         public string ActionBuildUI(string sUnique, HomeSeerAPI.IPlugInAPI.strTrigActInfo ActInfo)
         {
             return "";
-            //return null;
         }
 
         public bool ActionConfigured(HomeSeerAPI.IPlugInAPI.strTrigActInfo ActInfo)
@@ -107,17 +96,10 @@ namespace HSPI_EnOcean
         public string ConfigDevice(int pDevRefId, string user, int userRights, bool pNewDevice)
         {
             return "";
-            //		StringBuilder stb = new StringBuilder();
-            //			String pageName = "NPChartsConfigDevice";
-            //		return mPageBuilder.GetDeviceChartPage(pageName, devref, null);
-//            return mPageBuilder.GetPage("NPEasyCharts/Chart", "ds=" + pDevRefId + "&inlinePage=1");
-            //return mPageBuilder.GetConfigPage(pDevRefId, pNewDevice);
-            //return "<b>TODO</b>";
         }
 
         public HomeSeerAPI.Enums.ConfigDevicePostReturn ConfigDevicePost(int devref, string data, string user, int userRights)
         {
-            //HomeSeerAPI.Enums.ConfigDevicePostReturn r= new Enums.ConfigDevicePostReturn();
             return Enums.ConfigDevicePostReturn.DoneAndCancelAndStay;
         }
 
@@ -129,7 +111,6 @@ namespace HSPI_EnOcean
         public string get_ActionName(int ActionNumber)
         {
             return "";
-//            return null;
         }
 
         public bool get_Condition(HomeSeerAPI.IPlugInAPI.strTrigActInfo TrigInfo)
@@ -150,7 +131,6 @@ namespace HSPI_EnOcean
         public string get_SubTriggerName(int TriggerNumber, int SubTriggerNumber)
         {
             return "";
-            //return null;
         }
 
         public bool get_TriggerConfigured(HomeSeerAPI.IPlugInAPI.strTrigActInfo TrigInfo)
@@ -161,13 +141,11 @@ namespace HSPI_EnOcean
         public string get_TriggerName(int TriggerNumber)
         {
             return "";
-            //return null;
-        }
+       }
 
         public string GetPagePlugin(string page, string user, int userRights, string queryString)
         {
 
-            //		return "<div> Not here </div>";
             return mPageBuilder.GetPage(page, queryString);
         }
 
@@ -175,7 +153,6 @@ namespace HSPI_EnOcean
         {
             return false;
         }
-
         
         public void HSEvent(HomeSeerAPI.Enums.HSEvent EventType, object[] parms)
         {
@@ -195,7 +172,6 @@ namespace HSPI_EnOcean
                         }
                         break;
                     case Enums.HSEvent.LOG:
-                        //                    Source = parms[1] as string;
                         evtData.Add("typeid", parms[0] as string);
                         DateTime parsedTime;
                         if (DateTime.TryParse(parms[1] as string, out parsedTime))
@@ -239,20 +215,14 @@ namespace HSPI_EnOcean
                             evtData.Add("string_value", hsHost.DeviceString(sid));
                             var ta = hsHost.DeviceLastChangeRef(sid);
                             evtData.Add("time", ta.ToUniversalTime());
-                            
-                            //                    var tv = hsHost.DeviceValueEx(sid);
-                            //                  Console.WriteLine("TA = {0}, TV={1}", ta, tv);
-                            //                    mCore.deviceValueChanged((int)parms[4], (int)Utils.ToUnixTime(DateTime.UtcNow), (double)parms[2]);
                         }
                         break;
                     default:
                         evtData.Add("time", DateTime.UtcNow.ToString());
-                        //                    evtData.Add("PARAMS", string.Format(" - HSEvent {0}: {1}/{2}/{3}/{4}/{5}", EventType.ToString(), parms[5].ToString(), parms[0].ToString(), parms[1].ToString(), parms[2].ToString(), parms[3].ToString()));
                         Console.WriteLine("No handler yet for HSEvent type {0}", EventType.ToString());
                         Console.WriteLine(" - HSEvent {0}: {1}", EventType.ToString(), String.Join(" | ", parms));
                         break;
                 }
-                //mCore.QueueEvent(Source, EventType.ToString(), evtData);
             }
             catch (Exception e)
             {
@@ -267,32 +237,8 @@ namespace HSPI_EnOcean
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
-     /*       try
-            {
-                Directory.CreateDirectory("Data/" + Constants.PLUGIN_STRING_ID);
-                Console.WriteLine("Got dir created");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("Could not create directory: {0}", e.Message);
-            }*/
             mCore = new EnOceanManager(hsHost, hsHostCB, this);
             mCore.Initialize();
-/*
-            Scheduler.Classes.clsDeviceEnumeration devenum = hsHost.GetDeviceEnumerator() as Scheduler.Classes.clsDeviceEnumeration;
-
-           while (!devenum.Finished)
-            {
-                Scheduler.Classes.DeviceClass dev = devenum.GetNext();
-                var devInfo = dev.get_DeviceType_Get(hsHost);
-                Console.WriteLine(" got device of type {0}:{1} => {2}:{3} ({4})", devInfo.Device_Type, devInfo.Device_SubType, devInfo.Device_Type_Description, devInfo.Device_SubType_Description, dev.get_Ref(null));
- //               devInfo.
-//                device_map.Add(dev.get_Ref(null), dev);
-            }
-  */ 
-//            hsHost.Device
-
-            //hsHostCB.RegisterEventCB(Enums.HSEvent.VALUE_CHANGE, Name, "");
             hsHostCB.RegisterEventCB(Enums.HSEvent.CONFIG_CHANGE, Name, "");
             //hsHostCB.RegisterEventCB(Enums.HSEvent.LOG, Name, "");
             hsHostCB.RegisterEventCB(Enums.HSEvent.SETUP_CHANGE, Name, "");
@@ -301,22 +247,9 @@ namespace HSPI_EnOcean
 
             this.mPageBuilder = new PageBuilder(hsHost, hsHostCB, this, mCore);
 
-//            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Configuration", Name, "");
-//            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Charts", Name, "");
-//            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "/Chart", Name, "");
             hsHost.RegisterPage(Constants.PLUGIN_STRING_ID, Name, "");
             hsHost.RegisterPage(Constants.PLUGIN_STRING_ID+"_Interfaces", Name, "");
-//            hsHost.Register
-/*            WebPageDesc wpdCharts = new WebPageDesc();
-            wpdCharts.link = Constants.PLUGIN_STRING_ID + "/Charts";
-            wpdCharts.linktext = "Charts";
-            wpdCharts.page_title = "Charts";
-            wpdCharts.plugInName = Name;
-            hsHostCB.RegisterLink(wpdCharts);
-*/              
-            WebPageDesc foo = new WebPageDesc();
             
-
             WebPageDesc wpd = new WebPageDesc();
             wpd.link = Constants.PLUGIN_STRING_ID;
             wpd.linktext = "Configuration";
@@ -331,15 +264,7 @@ namespace HSPI_EnOcean
             wpi.page_title = "Interfaces";
             wpi.plugInName = Name;
             hsHostCB.RegisterLink(wpi);
-            //hsHostCB.RegisterConfigLink(wpi);
 
-            /*      WebPageDesc wpd3 = new WebPageDesc();
-                  wpd3.link = Constants.PLUGIN_STRING_ID + "/Chart";
-                  wpd3.linktext = "Chart";
-                  wpd3.page_title = "Chart";
-                  wpd3.plugInName = Name;
-                  hsHostCB.RegisterLink(wpd3);
-             */
             Console.WriteLine("INIT IO complete");
             return ""; // empty == OK 
         }
@@ -360,19 +285,16 @@ namespace HSPI_EnOcean
         public string PagePut(string data)
         {
             return "";
-            //return null;
         }
 
         public object PluginFunction(string procName, object[] parms)
         {
             return "";
-//            return null;
         }
 
         public object PluginPropertyGet(string procName, object[] parms)
         {
             return "";
-//            return null;
         }
 
         public void PluginPropertySet(string procName, object value)
@@ -449,19 +371,16 @@ namespace HSPI_EnOcean
         public string TriggerBuildUI(string sUnique, HomeSeerAPI.IPlugInAPI.strTrigActInfo TrigInfo)
         {
             return "";
-//            return null;
         }
 
         public string TriggerFormatUI(HomeSeerAPI.IPlugInAPI.strTrigActInfo TrigInfo)
         {
             return "";
-//            return null;
         }
 
         public HomeSeerAPI.IPlugInAPI.strMultiReturn TriggerProcessPostUI(System.Collections.Specialized.NameValueCollection PostData, HomeSeerAPI.IPlugInAPI.strTrigActInfo TrigInfoIN)
         {
             HomeSeerAPI.IPlugInAPI.strMultiReturn r = new IPlugInAPI.strMultiReturn();
-            //            r.
             return r;
         }
 

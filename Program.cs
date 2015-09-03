@@ -75,15 +75,11 @@ namespace HSPI_EnOcean
             //Environment.CommandLine.
             client = ScsServiceClientBuilder.CreateClient<IHSApplication>(new ScsTcpEndPoint(paramServer, 10400), pluginInst);
             clientCB = ScsServiceClientBuilder.CreateClient<IAppCallbackAPI>(new ScsTcpEndPoint(paramServer, 10400), pluginInst);
-            //                    client = ScsServiceClientBuilder.CreateClient(Of IHSApplication)(New ScsTcpEndPoint(sIp, 10400), gAppAPI)
-            //      clientCallback = ScsServiceClientBuilder.CreateClient(Of IAppCallbackAPI)(New ScsTcpEndPoint(sIp, 10400), gAppAPI)
-
+            
             try
             {
                 client.Connect();
-//                Thread.Sleep(5000);
                 clientCB.Connect();
-             //   Thread.Sleep(5000);
                 hsHost = client.ServiceProxy;
                 double ApiVer = hsHost.APIVersion;
                 Console.WriteLine("Host ApiVersion : {0}", ApiVer);
@@ -105,10 +101,9 @@ namespace HSPI_EnOcean
                 Console.WriteLine("Connected, waiting to be initialized...");
                 do
                 {
-                    //Console.Write("'");
-                    Thread.Sleep(1000);
+                    Thread.Sleep(500);
                 } while (client.CommunicationState == CommunicationStates.Connected && pluginInst.Running);
-                //Loop While client.CommunicationState = HSCF.Communication.Scs.Communication.CommunicationStates.Connected And Not HSPI.bShutDown
+
                 Console.WriteLine("Connection lost, exiting");
                 pluginInst.Running = false;
 
@@ -135,7 +130,6 @@ namespace HSPI_EnOcean
             {
                 var di = new System.IO.DirectoryInfo(moduleDir);
                 var module = di.GetFiles().FirstOrDefault(i => i.Name == (args.Name.Split(',')[0]) + ".dll");
-                //Console.WriteLine("Checking {0} which gave {1}", moduleDir, module);
                 if (module != null)
                 {
                     return System.Reflection.Assembly.LoadFrom(module.FullName);
@@ -149,8 +143,6 @@ namespace HSPI_EnOcean
         {
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
-            //CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
-            //CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
             
             // Try to be nice about finding sqlite interop.dll
             String binPath = Environment.CurrentDirectory + "/bin";
@@ -161,12 +153,10 @@ namespace HSPI_EnOcean
             _moduleDirectories.Add(binPath);
             _moduleDirectories.Add(Environment.CurrentDirectory + "/refs");
             AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-            //System.AppDomain.pr
+
             Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + ";" + binPath);
             Manager m = new Manager();
             m.run();
-            //            Console.WriteLine("This plugin cannot be instantiated directly.. please start from homeseer\n");
-            //          Console.ReadLine();
         }
     }
 }
