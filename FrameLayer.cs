@@ -12,7 +12,8 @@ namespace EnOcean
     {
         private IList<byte> list;
 
-        public int getSize() {
+        public int getSize()
+        {
             return list.Count;
         }
         public EnOceanOptionalData(IList<byte> list)
@@ -53,7 +54,8 @@ namespace EnOcean
         {
             return new EnOceanOptionalData(this.optData);
         }
-        public PacketType getType() {
+        public PacketType getType()
+        {
             return type;
 
         }
@@ -63,7 +65,7 @@ namespace EnOcean
             pkt.BuildPacket();
             return pkt;
         }
-        public Byte[] BuildPacket() 
+        public Byte[] BuildPacket()
         {
             if (optData == null)
                 optData = new byte[0];
@@ -151,12 +153,12 @@ namespace EnOcean
         {
             return u8CRC8Table[u8CRC ^ u8Data];
         }
-        static public byte CalcCRC8(IList<byte> data, int len = 0, int offset=0)
+        static public byte CalcCRC8(IList<byte> data, int len = 0, int offset = 0)
         {
             if (len == 0)
                 len = data.Count - offset;
             byte u8CRC = 0;
-            for (int i = offset; i < offset+len; i++)
+            for (int i = offset; i < offset + len; i++)
                 u8CRC = proccrc8(u8CRC, data[i]);
             //Console.WriteLine("CRC8 = 0x{0:x}", u8CRC);
             return u8CRC;
@@ -190,7 +192,8 @@ namespace EnOcean
         public EnOceanFrameLayer()
         {
             PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); }; // TESTING
-            PacketEventHandler += (EnOceanPacket p) => { 
+            PacketEventHandler += (EnOceanPacket p) =>
+            {
                 Console.WriteLine(" PKT HANDLER 2");
                 foreach (var listener in PacketListeners)
                 {
@@ -214,7 +217,8 @@ namespace EnOcean
             }
             Console.WriteLine("Ending comm thread");
         }
-        public class PacketListener : IDisposable {
+        public class PacketListener : IDisposable
+        {
             public PacketListener(IReceiveHandler pHandler)
             {
                 this.handler = pHandler;
@@ -250,7 +254,7 @@ namespace EnOcean
             var rawPacket = packet.BuildPacket();
             var pl = new PacketListener(handler);
             PacketListeners.Add(pl);
-            AGAIN:
+        AGAIN:
             // TESTING
             SendFrame(rawPacket);
             pl.waitHandle.WaitOne(timeout);

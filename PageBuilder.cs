@@ -170,12 +170,13 @@ namespace HSPI_EnOcean
             stb.AppendLine("</table>");
             // TODO: Show table with existing interfaces and status!
 
-            clsJQuery.jqButton ctrlBtnAddInterface  = new clsJQuery.jqButton("add_interface", "Add interface", pPageName, true);
+            clsJQuery.jqButton ctrlBtnAddInterface = new clsJQuery.jqButton("add_interface", "Add interface", pPageName, true);
             var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
             stb.AppendLine(FormStart("addForm", pPageName, "POST"));
             stb.AppendLine("<input type=\"text\" name=\"name\" value=\"Primary Controller\">");
             stb.AppendLine("<select name=\"com_selector\">\n");
-            foreach (var p in SerialPort.GetPortNames()) {
+            foreach (var p in SerialPort.GetPortNames())
+            {
                 var validPort = true;
                 foreach (var i in ifList)
                 {
@@ -231,7 +232,7 @@ namespace HSPI_EnOcean
                     Console.WriteLine("Error adding interface: could not get id");
                     newCtrl.Close();
                 }
-                
+
             }
             return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
         }
@@ -250,9 +251,9 @@ namespace HSPI_EnOcean
             stb.Append(DivEnd());
             if (conf_node_id != null)
             {
-                stb.AppendLine(DivStart("configuration_"+conf_node_id, ""));
+                stb.AppendLine(DivStart("configuration_" + conf_node_id, ""));
                 stb.AppendLine("<h2>Configuration for node " + conf_node_id + "</h2>");
-                stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\""+pPageName+"\">");
+                stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\"" + pPageName + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"controller_id\" value=\"" + conf_controller_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node\" value=\"" + conf_node_id + "\">");
                 stb.AppendLine("Please give device a name: ");
@@ -279,12 +280,12 @@ namespace HSPI_EnOcean
             stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
             foreach (var iface in mCore.GetInterfaces())
             {
-                foreach (JObject deviceInfo in iface.getSeenDevices().Values()) 
-            {
-                stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
-                stb.AppendLine("<td><a href=\"?configure_node="+deviceInfo["address"]+"&controller_id="+iface.ControllerId+"\">Configure</a></td>");
-                stb.Append("</tr>");
-            }
+                foreach (JObject deviceInfo in iface.getSeenDevices().Values())
+                {
+                    stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
+                    stb.AppendLine("<td><a href=\"?configure_node=" + deviceInfo["address"] + "&controller_id=" + iface.ControllerId + "\">Configure</a></td>");
+                    stb.Append("</tr>");
+                }
 
             }
             stb.AppendLine("</table>");

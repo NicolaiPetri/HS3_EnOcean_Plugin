@@ -13,7 +13,7 @@ using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
 using HSCF.Communication.ScsServices.Client;
 using HSCF.Communication.ScsServices.Service;
 
-namespace HSPI_EnOcean    
+namespace HSPI_EnOcean
 {
     using EnOcean;
     public class Manager : IDisposable
@@ -41,7 +41,7 @@ namespace HSPI_EnOcean
             Dispose(true);
             GC.SuppressFinalize(this);
         }
- 
+
         public void run()
         {
             string[] cmdArgs = Environment.GetCommandLineArgs();
@@ -75,7 +75,7 @@ namespace HSPI_EnOcean
             //Environment.CommandLine.
             client = ScsServiceClientBuilder.CreateClient<IHSApplication>(new ScsTcpEndPoint(paramServer, 10400), pluginInst);
             clientCB = ScsServiceClientBuilder.CreateClient<IAppCallbackAPI>(new ScsTcpEndPoint(paramServer, 10400), pluginInst);
-            
+
             try
             {
                 client.Connect();
@@ -143,7 +143,7 @@ namespace HSPI_EnOcean
         {
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
-            
+
             // Try to be nice about finding sqlite interop.dll
             String binPath = Environment.CurrentDirectory + "/bin";
             Console.WriteLine("Add Homeseer bin path to include lists: {0}", binPath);

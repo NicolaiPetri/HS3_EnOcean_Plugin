@@ -11,14 +11,15 @@ using Newtonsoft.Json.Converters;
 
 namespace EnOcean
 {
-    public enum EDeviceTypes { UNKNOWN=0, PUSHBUTTON_4x=1 }
+    public enum EDeviceTypes { UNKNOWN = 0, PUSHBUTTON_4x = 1 }
     public interface IEnOceanDevice
     {
         String DeviceId { get; }
         bool ProcessPacket(EnOceanPacket packet);
         void SaveConfiguration();
     }
-    abstract class EnOceanDeviceBase : IEnOceanDevice {
+    abstract class EnOceanDeviceBase : IEnOceanDevice
+    {
         EDeviceTypes deviceType;
         protected Scheduler.Classes.DeviceClass hsDevice;
         JObject deviceConfig;
@@ -27,21 +28,21 @@ namespace EnOcean
         public String DeviceId { get; set; }
 
         public abstract void AddOrUpdateHSDeviceProperties();
-        public EnOceanDeviceBase(IHSApplication Hs, EnOceanController Ctrl, String deviceId, JObject config )
+        public EnOceanDeviceBase(IHSApplication Hs, EnOceanController Ctrl, String deviceId, JObject config)
         {
             HS = Hs;
             DeviceId = deviceId;
             deviceConfig = config;
             Controller = Ctrl;
             deviceType = (EDeviceTypes)(int)config["device_type"];
- 
+
             GetHSDevice(); // Fetch or allocate new hs device
         }
         public abstract bool ProcessPacket(EnOceanPacket packet);
 
         protected void GetHSDevice()
         {
-            hsDevice =  Controller.getHSDevice(EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
+            hsDevice = Controller.getHSDevice(EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
             if (hsDevice == null)
             {
                 if (deviceConfig["node_name"] == null)
@@ -79,7 +80,7 @@ namespace EnOcean
             var btnDevice = Controller.getHSDevice(EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
             if (btnDevice == null)
             {
-                
+
                 Console.WriteLine("No button device for btn {0} - creating");
                 btnDevice = Controller.createHSDevice(hsDevice.get_Name(null) + " Button " + button, EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
                 btnDevice.set_Device_Type_String(HS, "EnOcean " + EnOceanController.EnOceanDeviceType.ChildDevice.ToString());
@@ -122,20 +123,21 @@ namespace EnOcean
             // Adjust button detection to handle correctly.
             // This will allow us to register that 2 buttons are down at the same time
             // Above is probably incorrect still .. check docs!!!
-            switch (cmd) {
+            switch (cmd)
+            {
                 case 0x10:
-                  button = 2;
+                    button = 2;
                     break;
                 case 0x30:
-                  button = 1;
+                    button = 1;
                     break;
                 case 0x50:
-                  button = 4;
+                    button = 4;
                     break;
                 case 0x70:
-                  button = 3;
+                    button = 3;
                     break;
-                    //                
+                //                
                 default:
                     Console.WriteLine("Unknown button: {0}", cmd);
                     button = 0; // Released
@@ -161,7 +163,7 @@ namespace EnOcean
             hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
             hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
-                SaveConfiguration();
+            SaveConfiguration();
         }
     }
     public class DeviceTypes
@@ -176,9 +178,9 @@ namespace EnOcean
                 {
                     case EDeviceTypes.PUSHBUTTON_4x:
                         {
-                        Console.WriteLine("BUTTON THING");
-                        var newDev =  new EnOceanButtonDevice(HS, Controller, deviceId, config);
-                        Controller.RegisterDevice(newDev);
+                            Console.WriteLine("BUTTON THING");
+                            var newDev = new EnOceanButtonDevice(HS, Controller, deviceId, config);
+                            Controller.RegisterDevice(newDev);
                         }
                         break;
                 }

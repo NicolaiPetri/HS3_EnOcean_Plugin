@@ -141,7 +141,7 @@ namespace HSPI_EnOcean
         public string get_TriggerName(int TriggerNumber)
         {
             return "";
-       }
+        }
 
         public string GetPagePlugin(string page, string user, int userRights, string queryString)
         {
@@ -153,7 +153,7 @@ namespace HSPI_EnOcean
         {
             return false;
         }
-        
+
         public void HSEvent(HomeSeerAPI.Enums.HSEvent EventType, object[] parms)
         {
             JObject evtData = new JObject();
@@ -185,7 +185,7 @@ namespace HSPI_EnOcean
                             evtData.Add("time", DateTime.UtcNow);
 
                         }
-                        
+
                         evtData.Add("category", parms[2] as string);
                         evtData.Add("message", parms[3] as string);
                         break;
@@ -196,7 +196,7 @@ namespace HSPI_EnOcean
                             //                         if (dev_addr == "")
                             evtData.Add("unique_id", "HS-ID-" + Source);
                             evtData.Add("address", dev_addr);
-//                            evtData.Add("address", parms[1].ToString());
+                            //                            evtData.Add("address", parms[1].ToString());
                             evtData.Add("value", parms[2].ToString());
                             Int32 sid = Int32.Parse(Source);
                             var ta = hsHost.DeviceLastChangeRef(sid);
@@ -248,8 +248,8 @@ namespace HSPI_EnOcean
             this.mPageBuilder = new PageBuilder(hsHost, hsHostCB, this, mCore);
 
             hsHost.RegisterPage(Constants.PLUGIN_STRING_ID, Name, "");
-            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID+"_Interfaces", Name, "");
-            
+            hsHost.RegisterPage(Constants.PLUGIN_STRING_ID + "_Interfaces", Name, "");
+
             WebPageDesc wpd = new WebPageDesc();
             wpd.link = Constants.PLUGIN_STRING_ID;
             wpd.linktext = "Configuration";
@@ -257,9 +257,9 @@ namespace HSPI_EnOcean
             wpd.plugInName = Name;
             hsHostCB.RegisterLink(wpd);
             hsHostCB.RegisterConfigLink(wpd);
-            
+
             WebPageDesc wpi = new WebPageDesc();
-            wpi.link = Constants.PLUGIN_STRING_ID+"_Interfaces";
+            wpi.link = Constants.PLUGIN_STRING_ID + "_Interfaces";
             wpi.linktext = "Interfaces";
             wpi.page_title = "Interfaces";
             wpi.plugInName = Name;
