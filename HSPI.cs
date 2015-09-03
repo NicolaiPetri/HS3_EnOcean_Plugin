@@ -483,7 +483,7 @@ namespace HSPI_EnOcean
         public HSPI(String pInstance)
         {
             Name = Constants.PLUGIN_STRING_NAME;
-            HSCOMPort = true;
+            HSCOMPort = false;
             //ActionAdvancedMode = xxx; // TODO:
             HasTriggers = false;
             TriggerCount = 0;

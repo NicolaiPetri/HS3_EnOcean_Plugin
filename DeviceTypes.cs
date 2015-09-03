@@ -45,9 +45,11 @@ namespace EnOcean
             hsDevice =  Controller.getHSDevice(EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
             if (hsDevice == null)
             {
-                deviceConfig["name"] = DeviceId;
-                hsDevice = Controller.createHSDevice((string)deviceConfig["name"], EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
+                if (deviceConfig["node_name"] == null)
+                    deviceConfig["node_name"] = DeviceId;
+                hsDevice = Controller.createHSDevice((string)deviceConfig["node_name"], EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
                 hsDevice.set_Device_Type_String(HS, "EnOcean " + EnOceanController.EnOceanDeviceType.SimpleDevice.ToString());
+                hsDevice.set_Relationship(HS, Enums.eRelationship.Parent_Root);
                 hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
                 hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
                 AddOrUpdateHSDeviceProperties();
@@ -74,6 +76,7 @@ namespace EnOcean
         public bool SetButtonState(int button, Boolean pressed)
         {
             String btnDeviceId = DeviceId + ":" + button;
+            Console.WriteLine("Button {0} pressed: {1}", button, pressed);
             var btnDevice = Controller.getHSDevice(EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
             if (btnDevice == null)
             {
@@ -84,7 +87,7 @@ namespace EnOcean
                 btnDevice.set_Relationship(HS, Enums.eRelationship.Child);
                 btnDevice.AssociatedDevice_Add(HS, hsDevice.get_Ref(null));
 
-                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                VSVGPairs.VSPair v = new VSVGPairs.VSPair(ePairStatusControl.Status);
                 v.PairType = VSVGPairs.VSVGPairType.SingleValue;
                 v.Value = 0;
                 v.Status = "Released";
@@ -94,7 +97,7 @@ namespace EnOcean
                 v.ControlUse = ePairControlUse._Off;
                 HS.DeviceVSP_AddPair(btnDevice.get_Ref(null), v);
 
-                VSVGPairs.VSPair v2 = new VSVGPairs.VSPair(ePairStatusControl.Both);
+                VSVGPairs.VSPair v2 = new VSVGPairs.VSPair(ePairStatusControl.Status);
                 v2.PairType = VSVGPairs.VSVGPairType.SingleValue;
                 v2.Value = 1;
                 v2.Status = "Pressed";
@@ -116,29 +119,39 @@ namespace EnOcean
             Console.WriteLine("Specific handler for packet!! FIXME: dta5={0}", packet.GetData()[5]);
             int button = 0xff;
             byte cmd = packet.GetData()[1];
+            // FIXME: 0x10 is spring up/down and rest is button down map
+            // Adjust button detection to handle correctly.
+            // This will allow us to register that 2 buttons are down at the same time
+            // Above is probably incorrect still .. check docs!!!
             switch (cmd) {
+                case 0x10:
+                  button = 2;
+                    break;
+                case 0x30:
+                  button = 1;
+                    break;
+                case 0x50:
+                  button = 4;
+                    break;
+                case 0x70:
+                  button = 3;
+                    break;
+                    //                
+                default:
+                    Console.WriteLine("Unknown button: {0}", cmd);
+                    button = 0; // Released
+                    for (int bc = 1; bc < 5; bc++)
+                    {
+                        SetButtonState(bc, false);
+                    }
+                    return true;
                 case 0x0:
                     button = 0; // Released
                     for (int bc = 1; bc < 5; bc++)
                     {
                         SetButtonState(bc, false);
                     }
-                     return true;
-                case 0x10:
-                  button = 1;
-                    break;
-                case 0x30:
-                  button = 2;
-                    break;
-                case 0x50:
-                  button = 3;
-                    break;
-                case 0x70:
-                  button = 4;
-                    break;
-                default:
-                    Console.WriteLine("Unknown button: {0}", cmd);
-                    return false;
+                    return true;
             }
             SetButtonState(button, true);
 //            if (cmd == 0x10) 

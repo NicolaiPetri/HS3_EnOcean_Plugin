@@ -203,11 +203,14 @@ namespace HSPI_EnOcean
             var node_id = pArgs.Get("configure_node");
             var controller_id = pArgs.Get("controller_id");
             var node_type = pArgs.Get("device_profile");
-  //          stb.AppendLine("Node id = " + node_id);
+            var node_name = pArgs.Get("node_name");
+            //          stb.AppendLine("Node id = " + node_id);
   //          stb.AppendLine("controller id = " + controller_id);
   //          stb.AppendLine("Node type = " + node_type);
             var ctrl = mCore.GetInterfaceById(controller_id);
-            DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, new JObject());
+            var newConfig = new JObject();
+            newConfig["node_name"] = node_name;
+            DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, newConfig);
             return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
 //            return new PageReturn(stb.ToString(), true);
         }
@@ -266,11 +269,15 @@ namespace HSPI_EnOcean
                 stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\""+pPageName+"\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"controller_id\" value=\"" + conf_controller_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node\" value=\"" + conf_node_id + "\">");
-                stb.AppendLine("<input type=\"hidden\" name=\"configure_node_test\" value=\"" + conf_node_id + "\">");
+//                stb.AppendLine("<input type=\"hidden\" name=\"configure_node_test\" value=\"" + conf_node_id + "\">");
+                stb.AppendLine("Please give device a name: ");
+                stb.AppendLine("<input type=\"text\" name=\"node_name\" value=\"" + conf_node_id + "\">");
                 stb.AppendLine("Please select DeviceProfile: ");
                 stb.AppendLine("<select name=\"device_profile\" >");
                 foreach (var pType in Enum.GetValues(typeof(EnOcean.EDeviceTypes)))
                 {
+                    if ((int)pType == (int)EnOcean.EDeviceTypes.UNKNOWN)
+                        continue;
                     stb.AppendLine("<option value=\"" + (int)pType + "\">" + pType.ToString() + "</option>");
                 }
                 stb.AppendLine("</select>");

@@ -375,7 +375,7 @@ namespace EnOcean
                 setControllerStatus("Active");
             } else {
                 setControllerStatus("Port open error!");
-                GetHSDeviceByAddress(0x1234abcd);
+//                GetHSDeviceByAddress(0x1234abcd);
                 return false;
             }
             var p = EnOceanPacket.MakePacket_CO_RD_VERSION();
@@ -400,9 +400,15 @@ namespace EnOcean
                 Console.WriteLine("Waiting for controller id!");
                 Thread.Sleep(100);
             } 
-            GetHSDeviceByAddress(0x1234abcd);
+//            GetHSDeviceByAddress(0x1234abcd);
+            if (UniqueControllerId == "Unknown")
+            {
+                Console.WriteLine("USB Device did not respond!");
+                setControllerStatus("Initialization error!");
+                return false;
+            }
             LoadChildDevices();
-            return this.UniqueControllerId != "Unknown";
+            return true;
         }
         void LoadChildDevices()
         {
@@ -421,19 +427,19 @@ namespace EnOcean
                 if (extraData == null)
                     extraData = new PlugExtraData.clsPlugExtraData();
                 var typeStr = (string)extraData.GetNamed("EnOcean Type");
-                if (typeStr == null)
-                    Console.WriteLine("Warning: No device type set on child device");
+//                if (typeStr == null)
+//                    Console.WriteLine("Warning: No device type set on child device");
                 var dataStr = (string)extraData.GetNamed("EnOcean Cfg");
                 var childConfig = new JObject();
                 if (dataStr != null)
                     childConfig = JObject.Parse(dataStr);
                 if (hsDev.get_Address(null).StartsWith(ControllerId))
                 {
-                    Console.WriteLine("DT : {0} vs {1}", hsDev.get_Device_Type_String(null), EnOceanDeviceType.SimpleDevice.ToString());
+//                    Console.WriteLine("DT : {0} vs {1}", hsDev.get_Device_Type_String(null), EnOceanDeviceType.SimpleDevice.ToString());
                     if (hsDev.get_Device_Type_String(null) != "EnOcean "+ EnOceanDeviceType.SimpleDevice.ToString())
                         continue;
                     DeviceTypes.CreateDeviceInstance(HS, this, hsDev.get_Address(null), (string)childConfig["device_type"], childConfig);
-                    Console.WriteLine("Found child device: {0} {1}", hsDev.get_Name(null), hsDev.get_Address(null));
+                    Console.WriteLine("Found child device: {0}", hsDev.get_Address(null));
                 }
             }
 
