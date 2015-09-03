@@ -290,13 +290,16 @@ namespace EnOcean
         {
             serialPort = new SerialPort(portName, 57600);
             serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
-            if (true)
+            try
             {
                 serialPort.Open();
             }
-            else
+            catch (Exception e)
             {
-                Console.WriteLine("DEBUG: port disabled");
+                Console.WriteLine("Error opening port: {0}", e);
+                commActive = false;
+                return false;
+
             }
 
             commActive = true;

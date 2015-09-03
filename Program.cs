@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading;
 using System.Reflection;
 
-
 using HomeSeerAPI;
 using HSCF.Communication.Scs.Communication;
 using HSCF.Communication.Scs.Communication.EndPoints.Tcp;
@@ -144,17 +143,16 @@ namespace HSPI_EnOcean
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-US");
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
-            // Try to be nice about finding sqlite interop.dll
-            String binPath = Environment.CurrentDirectory + "/bin";
-            Console.WriteLine("Add Homeseer bin path to include lists: {0}", binPath);
+            Console.WriteLine("Trying to add {0} to include path!", Environment.CurrentDirectory + "/Bin/HS3_EnOcean");
             _moduleDirectories = new List<string>();
-            _moduleDirectories.Add("bin");
-            _moduleDirectories.Add(Environment.CurrentDirectory);
+            //_moduleDirectories.Add("bin");
+            //_moduleDirectories.Add(Environment.CurrentDirectory);
+            _moduleDirectories.Add(Environment.CurrentDirectory + "/Bin/HS3_EnOcean");
+            String binPath = Environment.CurrentDirectory + "/bin";
             _moduleDirectories.Add(binPath);
-            _moduleDirectories.Add(Environment.CurrentDirectory + "/refs");
             AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
-
-            Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + ";" + binPath);
+            
+//            Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") + ";" + binPath);
             Manager m = new Manager();
             m.run();
         }

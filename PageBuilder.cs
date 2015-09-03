@@ -161,19 +161,28 @@ namespace HSPI_EnOcean
             stb.Append(DivEnd());
 
             var ifList = mCore.GetInterfaces();
-            stb.AppendLine("<table style=\"width: 400px\">");
+            stb.AppendLine("<h3>Existing controllers</h3>");
+            stb.AppendLine("<table border=\"1\" style=\"width: 400px\" cellspacing=\"0\">");
             stb.AppendLine("<tr><th>Interface port</th><th>Status</th></tr>");
+            int ifCount = 0;
             foreach (var iface in ifList)
             {
                 stb.AppendLine("<tr><td>" + iface.getPortName() + "</td><td>" + iface.getControllerStatus() + "</td></tr>");
+                ifCount++;
             }
+            if (ifCount == 0)
+                stb.AppendLine("<tr><td colspan=\"2\">No interfaces added.</td></tr>");
             stb.AppendLine("</table>");
             // TODO: Show table with existing interfaces and status!
 
             clsJQuery.jqButton ctrlBtnAddInterface = new clsJQuery.jqButton("add_interface", "Add interface", pPageName, true);
-            var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
+//            var ctrlComPortList = new clsJQuery.jqListBox("com_selector", "");
             stb.AppendLine(FormStart("addForm", pPageName, "POST"));
+            stb.AppendLine("<h3>Add new controller instance</h3>");
+            stb.AppendLine("<table cellspacing=\"0\">");
+            stb.AppendLine("<tr><td>");
             stb.AppendLine("<input type=\"text\" name=\"name\" value=\"Primary Controller\">");
+            stb.AppendLine("</td><td>");
             stb.AppendLine("<select name=\"com_selector\">\n");
             foreach (var p in SerialPort.GetPortNames())
             {
@@ -187,9 +196,14 @@ namespace HSPI_EnOcean
                     stb.AppendLine("\t<option value=\"" + p + "\">" + p + "</option>\n");
             }
             stb.AppendLine("</select>\n");
-            stb.Append(ctrlComPortList.Build());
+            stb.AppendLine("</td></tr>");
+  //          stb.Append(ctrlComPortList.Build());
+            stb.AppendLine("<tr><td>&nbsp;</td><td>");
             stb.Append("<input type=\"submit\" name=\"add_interface\" value=\"Add\">");
+            stb.AppendLine("</td></tr>");
+            stb.AppendLine("</table>");
             stb.AppendLine(FormEnd());
+            stb.AppendLine("<br/>");
             return new PageReturn(stb.ToString(), false);
         }
 
@@ -256,9 +270,15 @@ namespace HSPI_EnOcean
                 stb.AppendLine("<form name=\"cfgForm\" method=\"post\" action=\"" + pPageName + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"controller_id\" value=\"" + conf_controller_id + "\">");
                 stb.AppendLine("<input type=\"hidden\" name=\"configure_node\" value=\"" + conf_node_id + "\">");
+                stb.AppendLine("<table>");
+                stb.AppendLine("<tr><td>");
                 stb.AppendLine("Please give device a name: ");
+                stb.AppendLine("</td><td>");
                 stb.AppendLine("<input type=\"text\" name=\"node_name\" value=\"" + conf_node_id + "\">");
-                stb.AppendLine("Please select DeviceProfile: ");
+                stb.AppendLine("</td></tr>");
+                stb.AppendLine("<tr><td>");
+                stb.AppendLine("Please select a device profile: ");
+                stb.AppendLine("</td><td>");
                 stb.AppendLine("<select name=\"device_profile\" >");
                 foreach (var pType in Enum.GetValues(typeof(EnOcean.EDeviceTypes)))
                 {
@@ -267,11 +287,15 @@ namespace HSPI_EnOcean
                     stb.AppendLine("<option value=\"" + (int)pType + "\">" + pType.ToString() + "</option>");
                 }
                 stb.AppendLine("</select>");
+                stb.AppendLine("</td></tr>");
+                stb.AppendLine("<tr><td>&nbsp;</td><td>");
                 stb.AppendLine("<input type=\"submit\" name=\"Save\">");
+                stb.AppendLine("</td></tr>");
+                stb.AppendLine("</table>");
                 stb.AppendLine("</form>");
-                stb.AppendLine("TODO!");
                 stb.Append(DivEnd());
-                return new PageReturn(stb.ToString(), true);
+                stb.AppendLine("<br/>");
+                return new PageReturn(stb.ToString(), false);
             }
             stb.AppendLine("<form name=\"cfgForm\" method=\"POST\">");
 

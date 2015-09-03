@@ -136,11 +136,12 @@ namespace EnOcean
             DT.Device_Type = 33;
             DT.Device_SubType = (int)type;
             newDev.set_DeviceType_Set(HS, DT);
-
             newDev.set_Address(HS, id);
             newDev.set_Interface(HS, Constants.PLUGIN_STRING_NAME);
             newDev.set_InterfaceInstance(HS, "");
             newDev.set_Last_Change(HS, DateTime.Now);
+            newDev.set_Location(HS, "EnOcean");
+            newDev.set_Location2(HS, "EnOcean");
             return newDev;
         }
         public Scheduler.Classes.DeviceClass getHSDevice(EnOceanDeviceType type, string id = "")

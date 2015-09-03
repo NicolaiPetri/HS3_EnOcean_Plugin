@@ -73,11 +73,14 @@ namespace EnOcean
         {
             Console.WriteLine("Init of EnOceanButtonDevice : {0}", deviceId);
         }
+        Dictionary<int, Boolean> buttonState = new Dictionary<int, bool>();
+
         public bool SetButtonState(int button, Boolean pressed)
         {
             String btnDeviceId = DeviceId + ":" + button;
-            Console.WriteLine("Button {0} pressed: {1}", button, pressed);
+        //    Console.WriteLine("Button {0} pressed: {1}", button, pressed);
             var btnDevice = Controller.getHSDevice(EnOceanController.EnOceanDeviceType.ChildDevice, btnDeviceId);
+            buttonState[button] = pressed;
             if (btnDevice == null)
             {
 
@@ -116,7 +119,7 @@ namespace EnOcean
         }
         public override bool ProcessPacket(EnOceanPacket packet)
         {
-            Console.WriteLine("Specific handler for packet!! FIXME: dta5={0}", packet.GetData()[5]);
+            Console.WriteLine("Specific handler for packet, dta1={0}", packet.GetData()[1]);
             int button = 0xff;
             byte cmd = packet.GetData()[1];
             // FIXME: 0x10 is spring up/down and rest is button down map
@@ -139,21 +142,25 @@ namespace EnOcean
                     break;
                 //                
                 default:
-                    Console.WriteLine("Unknown button: {0}", cmd);
+                    Console.WriteLine("Unknown button, releasing: {0}", cmd);
                     button = 0; // Released
                     for (int bc = 1; bc < 5; bc++)
                     {
-                        SetButtonState(bc, false);
+                        if (buttonState.ContainsKey(bc) && buttonState[bc])
+                            SetButtonState(bc, false);
                     }
                     return true;
                 case 0x0:
+                    Console.WriteLine("Buttons released!");
                     button = 0; // Released
                     for (int bc = 1; bc < 5; bc++)
                     {
-                        SetButtonState(bc, false);
+                        if (buttonState.ContainsKey(bc) && buttonState[bc])
+                            SetButtonState(bc, false);
                     }
                     return true;
             }
+            Console.WriteLine("Button {0} pressed", button);
             SetButtonState(button, true);
             return true;
         }
