@@ -283,8 +283,11 @@ namespace EnOcean
 
             v.RangeStart = -50;
             v.RangeEnd = 100;
-            vg.Graphic = "/images/HomeSeer/status/Thermometer-50.png";
             v.RangeStatusDecimals = 2;
+ 
+            vg.RangeStart = -50;
+            vg.RangeEnd = 100;
+            vg.Graphic = "/images/HomeSeer/status/Thermometer-50.png";
  
             v.Render = Enums.CAPIControlType.ValuesRange;
 
