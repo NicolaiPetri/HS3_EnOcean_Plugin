@@ -183,7 +183,7 @@ namespace EnOcean
                 var newDev = createHSDevice("EnOcean controller: " + getPortName(), EnOceanDeviceType.Controller, getPortName());
 
                 newDev.set_Device_Type_String(HS, "EnOcean Controller");
-                newDev.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//                newDev.MISC_Set(HS, Enums.dvMISC.NO_LOG);
                 newDev.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
                 HS.SaveEventsDevices();
                 return newDev;

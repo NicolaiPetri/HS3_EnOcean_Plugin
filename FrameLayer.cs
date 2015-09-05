@@ -113,7 +113,7 @@ namespace EnOcean
 
         internal UInt32 getSource()
         {
-            int srcPos = 1;
+            int srcPos = 2;
             if (getTelegramType() == TelegramType.TT_4BS)
                 srcPos = 5;
             UInt32 src = data[srcPos];

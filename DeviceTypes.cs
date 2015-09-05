@@ -50,7 +50,7 @@ namespace EnOcean
                 hsDevice = Controller.createHSDevice((string)deviceConfig["node_name"], EnOceanController.EnOceanDeviceType.SimpleDevice, DeviceId);
                 hsDevice.set_Device_Type_String(HS, "EnOcean " + EnOceanController.EnOceanDeviceType.SimpleDevice.ToString());
                 hsDevice.set_Relationship(HS, Enums.eRelationship.Parent_Root);
-                hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//                hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
                 hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
                 AddOrUpdateHSDeviceProperties();
                 SaveConfiguration();
@@ -110,7 +110,7 @@ namespace EnOcean
                 v2.ControlUse = ePairControlUse._On;
                 HS.DeviceVSP_AddPair(btnDevice.get_Ref(null), v2);
 
-                btnDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//                btnDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
                 btnDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
                 Controller.SaveConfiguration();
@@ -168,7 +168,7 @@ namespace EnOcean
         public override void AddOrUpdateHSDeviceProperties()
         {
             Console.WriteLine("FIXME: Adding HS Device control status");
-            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
             hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
             SaveConfiguration();
@@ -207,7 +207,7 @@ namespace EnOcean
         public override void AddOrUpdateHSDeviceProperties()
         {
             Console.WriteLine("FIXME: Adding HS Device control status");
-            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
             hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
             hsDevice.set_Relationship(HS, Enums.eRelationship.Standalone);
@@ -264,7 +264,7 @@ namespace EnOcean
         public override void AddOrUpdateHSDeviceProperties()
         {
             Console.WriteLine("FIXME: Adding HS Device control status");
-            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
+//            hsDevice.MISC_Set(HS, Enums.dvMISC.NO_LOG);
             hsDevice.MISC_Set(HS, Enums.dvMISC.SHOW_VALUES);
 
             hsDevice.set_Relationship(HS, Enums.eRelationship.Standalone);
