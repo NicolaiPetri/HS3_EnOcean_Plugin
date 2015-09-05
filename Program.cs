@@ -124,16 +124,28 @@ namespace HSPI_EnOcean
         static private List<String> _moduleDirectories;// = new List<string>();
         static private System.Reflection.Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
+            Console.WriteLine("dirs have {0} entries", _moduleDirectories.Count);
             Console.WriteLine("Asked to find assembly : |{0}|", args.Name.Split(',')[0]);
             foreach (var moduleDir in _moduleDirectories)
             {
-                var di = new System.IO.DirectoryInfo(moduleDir);
-                var module = di.GetFiles().FirstOrDefault(i => i.Name == (args.Name.Split(',')[0]) + ".dll");
-                if (module != null)
+                try
                 {
-                    return System.Reflection.Assembly.LoadFrom(module.FullName);
+                    return System.Reflection.Assembly.LoadFrom(moduleDir+"/"+args.Name.Split(',')[0]+".dll");
+                    var di = new System.IO.DirectoryInfo(moduleDir);
+                    Console.WriteLine("Testing ({0} ({1})", di.FullName, moduleDir);
+                    var module = di.GetFiles().FirstOrDefault(i => i.Name == (args.Name.Split(',')[0]) + ".dll");
+                    if (module != null)
+                    {
+                        Console.WriteLine("Found it at {0}", di.FullName);
+                        return System.Reflection.Assembly.LoadFrom(module.FullName);
+                    }
+                }
+                catch (Exception e)
+                {
+                   Console.WriteLine("dll load error: {0}", e);
                 }
             }
+            Console.WriteLine(" - error locating assembly");
             return null;
         }
 
@@ -147,6 +159,7 @@ namespace HSPI_EnOcean
             _moduleDirectories = new List<string>();
             //_moduleDirectories.Add("bin");
             //_moduleDirectories.Add(Environment.CurrentDirectory);
+            _moduleDirectories.Add("Bin/HS3_EnOcean");
             _moduleDirectories.Add(Environment.CurrentDirectory + "/Bin/HS3_EnOcean");
             String binPath = Environment.CurrentDirectory + "/bin";
             _moduleDirectories.Add(binPath);

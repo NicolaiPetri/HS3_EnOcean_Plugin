@@ -217,6 +217,8 @@ namespace HSPI_EnOcean
             var newConfig = new JObject();
             newConfig["node_name"] = node_name;
             DeviceTypes.CreateDeviceInstance(HS, ctrl, node_id, node_type, newConfig);
+            if (ctrl.getSeenDevices().ContainsKey(node_id))
+                ctrl.getSeenDevices().Remove(node_id);
             return new PageReturn("<script>window.location='" + pPageName + "';</script>\n", true);
         }
         public PageReturn PostHandler_HS3_EnOcean_Interfaces(String pPageName, String pCleanName, NameValueCollection pArgs)
@@ -299,12 +301,12 @@ namespace HSPI_EnOcean
             }
             stb.AppendLine("<form name=\"cfgForm\" method=\"POST\">");
 
-            stb.AppendLine("<h2>Known EnOcean devices</h2>\n");
+            stb.AppendLine("<h2>Unconfigured EnOcean devices</h2>\n");
             stb.AppendLine("<table cellpadding=\"0\" cellspacing=\"0\" border=\"1\" style=\"width: 100%\">\n");
             stb.AppendLine("<tr><th>Node id</th><th>First seen</th><th>Configured</th><th>Actions</th></tr>");
             foreach (var iface in mCore.GetInterfaces())
             {
-                foreach (JObject deviceInfo in iface.getSeenDevices().Values())
+                foreach (JObject deviceInfo in iface.getSeenDevices().Values)
                 {
                     stb.AppendLine("<tr><td>" + deviceInfo["address"] + "</td><td>" + deviceInfo["first_seen"] + "</td><td>" + deviceInfo["configured"] + "</td>");
                     stb.AppendLine("<td><a href=\"?configure_node=" + deviceInfo["address"] + "&controller_id=" + iface.ControllerId + "\">Configure</a></td>");

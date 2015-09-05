@@ -336,6 +336,7 @@ namespace HSPI_EnOcean
 
         public void ShutdownIO()
         {
+            mCore.Stop();
             Running = false;
         }
 

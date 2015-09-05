@@ -14,27 +14,23 @@ using HSPI_EnOcean;
 
 namespace EnOcean
 {
-    public class DeviceState
-    {
-        public Int64 devRefId;
-        public String deviceType;
-        public String deviceName;
-        public String deviceAddress;
-        public Int64 manualDeviceTypeGroup;
-        public DateTime lastValueChange;
-        public DateTime lastValuePoll;
-        public Decimal lastValue;
-        public Boolean collectData;
-        public TimeSpan pollInterval;
-        public Boolean pollDevice;
-    }
-
     class EnOceanManager
     {
         IHSApplication HS;
         IAppCallbackAPI HSCB;
         HSPI hspiInst;
         Dictionary<String, EnOceanController> interfaceList = new Dictionary<String, EnOceanController>();
+        public void Stop()
+        {
+            Console.WriteLine("Stopping all interfaces");
+            // Shutdown thing
+            foreach (var iface in this.GetInterfaces())
+            {
+                iface.Close();
+            }
+            Console.WriteLine(" - DONE");
+
+        }
         public EnOceanManager(IHSApplication pHsHost, IAppCallbackAPI pHsCB, HSPI pHspiInst)
         {
             hspiInst = pHspiInst;
@@ -333,39 +329,49 @@ namespace EnOcean
         public String ControllerId { get { if (UniqueControllerId == null) return "unknown"; return UniqueControllerId; } }
         void controller_PacketEvent(EnOceanPacket pkt)
         {
-            Console.WriteLine("Got packet: {0}, opt type {1}", pkt, pkt.Get_OptionalData().getType());
+//            Console.WriteLine("Got packet: {0}, opt type {1}", pkt, pkt.Get_OptionalData().getType());
+            Console.WriteLine("Got telegram of type: {0}", pkt.getTelegramType());
             if (pkt.Get_OptionalData() != null && pkt.Get_OptionalData().getSize() > 0)
             {
                 var odata = pkt.Get_OptionalData();
-                Console.WriteLine(" - destination was {0:X8}", odata.getDestination());
+//                Console.WriteLine(" - destination was {0:X8}", odata.getDestination());
                 String childDevId = ControllerId + ":" + pkt.getSource().ToString("x8");
                 //                var devInst = RegisteredDevices[ControllerId + ":" + odata.getDestination().ToString("x8")];
                 if (RegisteredDevices.ContainsKey(childDevId))
                 {
                     var devInst = RegisteredDevices[childDevId];
-                    Console.WriteLine("Located hsDev : {0}", devInst.DeviceId);
+  //                  Console.WriteLine("Located hsDev : {0}", devInst.DeviceId);
                     devInst.ProcessPacket(pkt);
                 }
                 else
                 {
-                    AddSeenDevice(childDevId);
+                    if (pkt.getTelegramType() == TelegramType.TT_4BS && ((pkt.GetData()[4]) & 0x08) == 0x08)
+                    {
+                        Console.WriteLine("4BS - but no teach in bit, ignoring");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Add to AddSeenDevices");
+                        AddSeenDevice(childDevId);
+                    }
                     Console.WriteLine("Did not locate {0:x8}", childDevId);
                 }
             }
         }
-        public JObject getSeenDevices()
+        public Dictionary<String, JObject> getSeenDevices()
         {
-            return config["nodes"].ToObject<JObject>();
+            return seenDevices;
+//            return config["nodes"].ToObject<JObject>();
         }
+        Dictionary<String, JObject> seenDevices = new Dictionary<string, JObject>();
         private void AddSeenDevice(String strAddr)
         {
-            var un_list = (JObject)config["nodes"];
             JObject nInfo = new JObject();
             nInfo.Add("address", strAddr);
             nInfo.Add("configured", false);
             nInfo.Add("first_seen", DateTime.UtcNow);
-            un_list[strAddr] = nInfo;
-            SaveConfiguration();
+            seenDevices[strAddr] = nInfo;
+//            SaveConfiguration();
 
         }
         private Scheduler.Classes.DeviceClass GetHSDeviceByAddress(UInt32 p)

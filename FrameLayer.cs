@@ -1,13 +1,15 @@
 using System;
 using System.IO;
 using System.IO.Ports;
+//using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 
 namespace EnOcean
 {
     public enum PacketType { RESERVED = 0, RADIO_ERP1 = 1, RESPONSE, RADIO_SUB_TEL, EVENT, COMMON_COMMAND, SMART_ACK_COMMAND, REMOTE_MAN_COMMAND, RESERVED_ENOCEAN, RADIO_MESSAGE, RADIO_ERP2 };
-
+    public enum TelegramType { UNKNOWN=0, TT_4BS = 0xA5, TT_ADT = 0xA6, TT_VLD = 0xC2, TT_1BS = 0xD5}
     public class EnOceanOptionalData
     {
         private IList<byte> list;
@@ -53,6 +55,12 @@ namespace EnOcean
         public EnOceanOptionalData Get_OptionalData()
         {
             return new EnOceanOptionalData(this.optData);
+        }
+        public TelegramType getTelegramType()
+        {
+            if (data == null || data.Count == 0)
+                return TelegramType.UNKNOWN;
+            return (TelegramType)data[0];
         }
         public PacketType getType()
         {
@@ -105,10 +113,13 @@ namespace EnOcean
 
         internal UInt32 getSource()
         {
-            UInt32 src = data[2];
-            src = (src * 256) + data[3];
-            src = (src * 256) + data[4];
-            src = (src * 256) + data[5];
+            int srcPos = 1;
+            if (getTelegramType() == TelegramType.TT_4BS)
+                srcPos = 5;
+            UInt32 src = data[srcPos];
+            src = (src * 256) + data[srcPos+1];
+            src = (src * 256) + data[srcPos+2];
+            src = (src * 256) + data[srcPos+3];
 
             return src;
         }
@@ -170,6 +181,8 @@ namespace EnOcean
         SerialPort serialPort;
         Thread commThreadHandle;
         Boolean commActive;
+        ConcurrentQueue<EnOceanPacket> rxPacketQueue = new ConcurrentQueue<EnOceanPacket>();
+        EventWaitHandle rxCommThreadWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
         object commLock = new object();
 
         protected virtual void Dispose(bool disposing)
@@ -191,10 +204,12 @@ namespace EnOcean
 
         public EnOceanFrameLayer()
         {
-            PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); }; // TESTING
+//                Queue.Synchronized()
+//            Queue<PacketEvent>
+//            PacketEventHandler += (EnOceanPacket p) => { Console.WriteLine(" PKT HANDLER"); }; // TESTING
             PacketEventHandler += (EnOceanPacket p) =>
             {
-                Console.WriteLine(" PKT HANDLER 2");
+//                Console.WriteLine(" PKT HANDLER 2");
                 foreach (var listener in PacketListeners)
                 {
                     if (listener.handler(p))
@@ -212,7 +227,18 @@ namespace EnOcean
             Console.WriteLine("Starting communications thread");
             while (commActive)
             {
-                Thread.Sleep(500);
+                if (rxCommThreadWaitHandle.WaitOne(250))
+                {
+                AGAIN:
+                    EnOceanPacket qp;
+                    if (rxPacketQueue.TryDequeue(out qp))
+                    {
+                        if (PacketEventHandler != null)
+                            PacketEventHandler(qp);
+                        goto AGAIN;
+                    }
+
+                }
                 //				SendFrame(verGet);
             }
             Console.WriteLine("Ending comm thread");
@@ -293,6 +319,8 @@ namespace EnOcean
             try
             {
                 serialPort.Open();
+                commThreadHandle = new Thread(new ThreadStart(commThread));
+                commThreadHandle.Start();
             }
             catch (Exception e)
             {
@@ -332,12 +360,13 @@ namespace EnOcean
             int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
             receiveBuffer.InsertRange(receiveBuffer.Count, rBuf);
             receiveIdx += bytesRead;
-            Console.WriteLine("Data Received: {0} bytes", bytesRead);
+/*            Console.WriteLine("Data Received: {0} bytes", bytesRead);
             foreach (var b in receiveBuffer)
             {
                 Console.Write("0x{0:X2} ", b);
             }
             Console.WriteLine();
+ */
         AGAIN:
             while (receiveBuffer.Count > 0 && receiveBuffer[0] != 0x55)
                 receiveBuffer.RemoveAt(0);
@@ -375,9 +404,8 @@ namespace EnOcean
                 List<byte> optPayload = receiveBuffer.GetRange(pktLen, optLen);
                 Console.WriteLine("Dispatching validated packet of {0} bytes and {1} bytes", payload.Count, optPayload.Count);
                 EnOceanPacket parsedPkt = EnOceanPacket.Parse(pktHdr[3], payload, optPayload);
-                if (PacketEventHandler != null)
-                    PacketEventHandler(parsedPkt);
-
+                rxPacketQueue.Enqueue(parsedPkt);
+                rxCommThreadWaitHandle.Set(); // Notify rx thread
                 receiveBuffer.RemoveRange(0, optLen + pktLen);
                 goto AGAIN;
             }
