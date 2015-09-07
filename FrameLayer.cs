@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.IO.Ports;
 //using System.Collections;
 using System.Collections.Concurrent;
@@ -222,6 +223,33 @@ namespace EnOcean
 
 
         }
+        void recvHackThread()
+        {
+            Console.WriteLine("Starting Linux recv hack thread");
+	    byte[] rxBuf = new byte[64];
+            while (commActive)
+            {
+		try {
+			int readBytes = serialPort.Read(rxBuf, 0, 64);
+			if (readBytes >0) {
+				var tBuf = rxBuf.Take(readBytes);
+				// Console.WriteLine("Got {0} bytes", readBytes);
+			    //byte[] rBuf = new byte[sp.BytesToRead];
+			    //int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
+			lock(receiveBuffer) {
+			    receiveBuffer.InsertRange(receiveBuffer.Count, tBuf);
+			    receiveIdx += readBytes;
+			}
+			}
+		processReceiveBuffer();
+		} catch (TimeoutException e) {
+			// Do nothing
+		} catch (Exception e) {
+			Console.WriteLine("E hack : {0}", e);
+		}
+            }
+            Console.WriteLine("Ending Linux recv comm thread");
+        }
         void commThread()
         {
             Console.WriteLine("Starting communications thread");
@@ -315,16 +343,30 @@ namespace EnOcean
         public bool Open(string portName)
         {
             serialPort = new SerialPort(portName, 57600);
-            serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
+	    bool useRecvEvent = true;
+ 	    int p = (int) Environment.OSVersion.Platform;
+	    if ((p == 4) || (p == 6) || (p == 128)) {
+		Console.WriteLine ("Running on Unix");
+		useRecvEvent = false;
+	    }
+		if (useRecvEvent)
+            		serialPort.DataReceived += new SerialDataReceivedEventHandler(onCommDataReceived);
             try
             {
                 serialPort.Open();
+		if (!useRecvEvent) {
+			serialPort.ReadTimeout = 50;
+			var hackThread = new Thread(new ThreadStart(recvHackThread));
+			hackThread.Start();
+		}
                 commThreadHandle = new Thread(new ThreadStart(commThread));
                 commThreadHandle.Start();
             }
             catch (Exception e)
             {
                 Console.WriteLine("Error opening port: {0}", e);
+		if (useRecvEvent)
+            		serialPort.DataReceived -= new SerialDataReceivedEventHandler(onCommDataReceived);
                 commActive = false;
                 return false;
 
@@ -358,8 +400,11 @@ namespace EnOcean
             SerialPort sp = (SerialPort)sender;
             byte[] rBuf = new byte[sp.BytesToRead];
             int bytesRead = sp.Read(rBuf, 0, rBuf.Length);
+			lock(receiveBuffer) {
             receiveBuffer.InsertRange(receiveBuffer.Count, rBuf);
             receiveIdx += bytesRead;
+		}
+		processReceiveBuffer();
 /*            Console.WriteLine("Data Received: {0} bytes", bytesRead);
             foreach (var b in receiveBuffer)
             {
@@ -367,6 +412,8 @@ namespace EnOcean
             }
             Console.WriteLine();
  */
+	}
+	void processReceiveBuffer() {
         AGAIN:
             while (receiveBuffer.Count > 0 && receiveBuffer[0] != 0x55)
                 receiveBuffer.RemoveAt(0);
